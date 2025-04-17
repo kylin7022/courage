@@ -2,12 +2,24 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">客户管理</h5>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#customerModal">
-            <i class="fas fa-plus"></i> 添加客户
-        </button>
-    </div>
+    <div class="container mt-4">
+        <h2>客户管理</h2>
+        
+        <div class="row mb-3">
+            <div class="col">
+                <form class="form-inline" method="get">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索客户名称、联系人或电话">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="submit">搜索</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'inventory:customer_add' %}" class="btn btn-primary">添加客户</a>
+            </div>
+        </div>
 
     <!-- 客户列表 -->
     <div class="table-responsive">

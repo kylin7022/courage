@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="{{ form.customer.id_for_label }}">客户</label>
+            {{ form.customer }}
+            {% if form.customer.errors %}
+            <div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.model_number.id_for_label }}">型号</label>
+            {{ form.model_number }}
+            {% if form.model_number.errors %}
+            <div class="invalid-feedback d-block">{{ form.model_number.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.unit_price.id_for_label }}">单价</label>
+            {{ form.unit_price }}
+            {% if form.unit_price.errors %}
+            <div class="invalid-feedback d-block">{{ form.unit_price.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">描述</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">保存</button>
+        <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">返回</a>
+    </form>
+</div>
+{% endblock %}

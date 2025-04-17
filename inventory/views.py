@@ -3,13 +3,15 @@ from django.http import HttpResponse, FileResponse
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.contrib import messages
-from .models import Customer, ProductType, IncomingShipment, OutgoingShipment
-from .forms import CustomerForm, ProductTypeForm, IncomingShipmentForm, OutgoingShipmentForm
+from .models import Customer, ProductType, IncomingShipment, OutgoingShipment, BatchGroup, Price
+from .forms import (
+    CustomerForm, ProductTypeForm, IncomingShipmentForm, 
+    OutgoingShipmentForm, BatchGroupForm, PriceForm
+)
 import xlsxwriter
 import io
+import datetime
 from django.contrib.auth.decorators import login_required
-from .models import Price
-from .forms import PriceForm
 
 def customer_list(request):
     search_query = request.GET.get('search', '')
@@ -61,7 +63,7 @@ def customer_delete(request, customer_id):
 
 def product_list(request):
     search_query = request.GET.get('search', '')
-    products = ProductType.objects.all().select_related('customer')
+    products = ProductType.objects.all().select_related('customer').order_by('-created_at')
     if search_query:
         products = products.filter(
             Q(model_number__icontains=search_query) |
@@ -70,8 +72,62 @@ def product_list(request):
     paginator = Paginator(products, 10)
     page = request.GET.get('page')
     products = paginator.get_page(page)
-    return render(request, 'inventory/products.html', {'products': products, 'search_query': search_query})
-    
+    return render(request, 'inventory/product_list.html', {
+        'products': products,
+        'search_query': search_query
+    })
+
+def product_type_list(request):
+    search_query = request.GET.get('search', '')
+    product_types = ProductType.objects.all().select_related('customer').order_by('-created_at')
+    if search_query:
+        product_types = product_types.filter(
+            Q(model_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query)
+        )
+    paginator = Paginator(product_types, 10)
+    page = request.GET.get('page')
+    product_types = paginator.get_page(page)
+    return render(request, 'inventory/product_type_list.html', {
+        'product_types': product_types,
+        'search_query': search_query
+    })
+
+def product_type_add(request):
+    if request.method == 'POST':
+        form = ProductTypeForm(request.POST)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, '产品型号添加成功！')
+                return redirect('inventory:product_type_list')
+            except Exception as e:
+                messages.error(request, f'保存失败：{str(e)}')
+    else:
+        form = ProductTypeForm()
+    return render(request, 'inventory/product_type_form.html', {
+        'form': form,
+        'title': '添加产品型号'
+    })
+
+def product_type_edit(request, product_type_id):
+    product_type = get_object_or_404(ProductType, id=product_type_id)
+    if request.method == 'POST':
+        form = ProductTypeForm(request.POST, instance=product_type)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, '产品型号更新成功！')
+                return redirect('inventory:product_type_list')
+            except Exception as e:
+                messages.error(request, f'保存失败：{str(e)}')
+    else:
+        form = ProductTypeForm(instance=product_type)
+    return render(request, 'inventory/product_type_form.html', {
+        'form': form,
+        'title': '编辑产品型号'
+    })
+
     try:
         page_size = int(request.GET.get('page_size', 10))  # 允许自定义每页显示数量
         page_size = min(max(page_size, 1), 100)  # 限制范围在1-100之间

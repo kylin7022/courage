@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>产品型号管理</h2>
+    
+    <div class="row mb-3">
+        <div class="col">
+            <form class="form-inline" method="get">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索型号或客户名称">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit">搜索</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'inventory:product_type_add' %}" class="btn btn-primary">添加产品型号</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>客户</th>
+                    <th>型号</th>
+                    <th>单价</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product_type in product_types %}
+                <tr>
+                    <td>{{ product_type.customer.name }}</td>
+                    <td>{{ product_type.model_number }}</td>
+                    <td>{{ product_type.unit_price }}</td>
+                    <td>{{ product_type.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <a href="{% url 'inventory:product_type_edit' product_type.id %}" class="btn btn-sm btn-info">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">暂无产品型号记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if product_types.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if product_types.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ product_types.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo;</a>
+            </li>
+            {% endif %}
+
+            {% for i in product_types.paginator.page_range %}
+            <li class="page-item {% if product_types.number == i %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ i }}</a>
+            </li>
+            {% endfor %}
+
+            {% if product_types.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ product_types.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
