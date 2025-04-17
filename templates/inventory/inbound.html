@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">入库管理</h5>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inboundModal">
+            <i class="fas fa-plus"></i> 新建入库单
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>入库单号</th>
+                        <th>入库日期</th>
+                        <th>供应商</th>
+                        <th>总金额</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inbound in inbounds %}
+                    <tr>
+                        <td>{{ inbound.code }}</td>
+                        <td>{{ inbound.date }}</td>
+                        <td>{{ inbound.supplier }}</td>
+                        <td>{{ inbound.total_amount }}</td>
+                        <td>
+                            <span class="badge {% if inbound.status == '已确认' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ inbound.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info view-inbound" data-id="{{ inbound.id }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if inbound.status != '已确认' %}
+                            <button class="btn btn-sm btn-warning edit-inbound" data-id="{{ inbound.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-inbound" data-id="{{ inbound.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-sm btn-secondary print-inbound" data-id="{{ inbound.id }}">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 入库单表单模态框 -->
+<div class="modal fade" id="inboundModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">入库单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="inboundForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" id="inboundId">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">入库单号</label>
+                            <input type="text" class="form-control" name="code" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">入库日期</label>
+                            <input type="date" class="form-control" name="date" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">供应商</label>
+                            <select class="form-select" name="supplier" required>
+                                <option value="">请选择供应商</option>
+                                {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">备注</label>
+                            <input type="text" class="form-control" name="remarks">
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">入库明细</h6>
+                    <div id="inboundItems">
+                        <div class="row mb-2 inbound-item">
+                            <div class="col-md-4">
+                                <select class="form-select product-select" name="products[]" required>
+                                    <option value="">选择产品</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}" data-price="{{ product.price }}">{{ product.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control quantity" name="quantities[]" placeholder="数量" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control price" name="prices[]" placeholder="单价" step="0.01" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control amount" placeholder="金额" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger remove-item">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary mt-2" id="addItem">
+                        <i class="fas fa-plus"></i> 添加明细
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" id="confirmInbound">确认入库</button>
+                <button type="button" class="btn btn-primary" id="saveInbound">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 添加明细行
+    $('#addItem').click(function() {
+        const newItem = $('.inbound-item').first().clone();
+        newItem.find('input').val('');
+        newItem.find('select').val('');
+        $('#inboundItems').append(newItem);
+    });
+
+    // 删除明细行
+    $(document).on('click', '.remove-item', function() {
+        if ($('.inbound-item').length > 1) {
+            $(this).closest('.inbound-item').remove();
+        }
+    });
+
+    // 自动填充单价和计算金额
+    $(document).on('change', '.product-select', function() {
+        const price = $(this).find(':selected').data('price');
+        const row = $(this).closest('.inbound-item');
+        row.find('.price').val(price);
+        calculateAmount(row);
+    });
+
+    $(document).on('input', '.quantity, .price', function() {
+        calculateAmount($(this).closest('.inbound-item'));
+    });
+
+    function calculateAmount(row) {
+        const quantity = row.find('.quantity').val() || 0;
+        const price = row.find('.price').val() || 0;
+        const amount = (quantity * price).toFixed(2);
+        row.find('.amount').val(amount);
+    }
+
+    // 保存入库单
+    $('#saveInbound').click(function() {
+        const form = $('#inboundForm');
+        const inboundId = $('#inboundId').val();
+        const url = inboundId ? `/inventory/inbound/${inboundId}/` : '/inventory/inbound/';
+        const method = inboundId ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            data: form.serialize(),
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('保存失败：' + xhr.responseText);
+            }
+        });
+    });
+
+    // 确认入库
+    $('#confirmInbound').click(function() {
+        if (confirm('确认入库后将不能修改，是否继续？')) {
+            const inboundId = $('#inboundId').val();
+            $.post(`/inventory/inbound/${inboundId}/confirm/`, function() {
+                location.reload();
+            }).fail(function(xhr) {
+                alert('确认失败：' + xhr.responseText);
+            });
+        }
+    });
+
+    // 查看入库单
+    $('.view-inbound').click(function() {
+        const inboundId = $(this).data('id');
+        $.get(`/inventory/inbound/${inboundId}/`, function(inbound) {
+            $('#inboundId').val(inbound.id);
+            $('#inboundForm [name=code]').val(inbound.code).prop('readonly', true);
+            $('#inboundForm [name=date]').val(inbound.date).prop('readonly', true);
+            $('#inboundForm [name=supplier]').val(inbound.supplier).prop('disabled', true);
+            $('#inboundForm [name=remarks]').val(inbound.remarks).prop('readonly', true);
+            
+            // 清空并添加明细行
+            $('#inboundItems').empty();
+            inbound.items.forEach(item => {
+                const itemRow = $('.inbound-item').first().clone();
+                itemRow.find('.product-select').val(item.product).prop('disabled', true);
+                itemRow.find('.quantity').val(item.quantity).prop('readonly', true);
+                itemRow.find('.price').val(item.price).prop('readonly', true);
+                itemRow.find('.amount').val(item.amount);
+                itemRow.find('.remove-item').hide();
+                $('#inboundItems').append(itemRow);
+            });
+            
+            $('#addItem').hide();
+            $('#saveInbound, #confirmInbound').hide();
+            $('#inboundModal').modal('show');
+        });
+    });
+
+    // 打印入库单
+    $('.print-inbound').click(function() {
+        const inboundId = $(this).data('id');
+        window.open(`/inventory/inbound/${inboundId}/print/`, '_blank');
+    });
+});
+</script>
+{% endblock %}

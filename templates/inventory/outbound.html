@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">出库管理</h5>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#outboundModal">
+            <i class="fas fa-plus"></i> 新建出库单
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>出库单号</th>
+                        <th>出库日期</th>
+                        <th>客户</th>
+                        <th>总金额</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for outbound in outbounds %}
+                    <tr>
+                        <td>{{ outbound.code }}</td>
+                        <td>{{ outbound.date }}</td>
+                        <td>{{ outbound.customer }}</td>
+                        <td>{{ outbound.total_amount }}</td>
+                        <td>
+                            <span class="badge {% if outbound.status == '已确认' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ outbound.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info view-outbound" data-id="{{ outbound.id }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if outbound.status != '已确认' %}
+                            <button class="btn btn-sm btn-warning edit-outbound" data-id="{{ outbound.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-outbound" data-id="{{ outbound.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-sm btn-secondary print-outbound" data-id="{{ outbound.id }}">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 出库单表单模态框 -->
+<div class="modal fade" id="outboundModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">出库单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="outboundForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" id="outboundId">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">出库单号</label>
+                            <input type="text" class="form-control" name="code" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">出库日期</label>
+                            <input type="date" class="form-control" name="date" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">客户</label>
+                            <select class="form-select" name="customer" required>
+                                <option value="">请选择客户</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">备注</label>
+                            <input type="text" class="form-control" name="remarks">
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">出库明细</h6>
+                    <div id="outboundItems">
+                        <div class="row mb-2 outbound-item">
+                            <div class="col-md-4">
+                                <select class="form-select product-select" name="products[]" required>
+                                    <option value="">选择产品</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}" 
+                                            data-price="{{ product.price }}"
+                                            data-stock="{{ product.stock_quantity }}">
+                                        {{ product.name }} (库存: {{ product.stock_quantity }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control quantity" name="quantities[]" placeholder="数量" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control price" name="prices[]" placeholder="单价" step="0.01" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control amount" placeholder="金额" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger remove-item">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary mt-2" id="addItem">
+                        <i class="fas fa-plus"></i> 添加明细
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" id="confirmOutbound">确认出库</button>
+                <button type="button" class="btn btn-primary" id="saveOutbound">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 添加明细行
+    $('#addItem').click(function() {
+        const newItem = $('.outbound-item').first().clone();
+        newItem.find('input').val('');
+        newItem.find('select').val('');
+        $('#outboundItems').append(newItem);
+    });
+
+    // 删除明细行
+    $(document).on('click', '.remove-item', function() {
+        if ($('.outbound-item').length > 1) {
+            $(this).closest('.outbound-item').remove();
+        }
+    });
+
+    // 自动填充单价和计算金额
+    $(document).on('change', '.product-select', function() {
+        const price = $(this).find(':selected').data('price');
+        const stock = $(this).find(':selected').data('stock');
+        const row = $(this).closest('.outbound-item');
+        row.find('.price').val(price);
+        row.find('.quantity').attr('max', stock);
+        calculateAmount(row);
+    });
+
+    $(document).on('input', '.quantity, .price', function() {
+        const row = $(this).closest('.outbound-item');
+        const quantity = row.find('.quantity').val();
+        const stock = row.find('.product-select option:selected').data('stock');
+        
+        if (quantity > stock) {
+            alert('出库数量不能超过库存数量！');
+            row.find('.quantity').val(stock);
+        }
+        calculateAmount(row);
+    });
+
+    function calculateAmount(row) {
+        const quantity = row.find('.quantity').val() || 0;
+        const price = row.find('.price').val() || 0;
+        const amount = (quantity * price).toFixed(2);
+        row.find('.amount').val(amount);
+    }
+
+    // 保存出库单
+    $('#saveOutbound').click(function() {
+        const form = $('#outboundForm');
+        const outboundId = $('#outboundId').val();
+        const url = outboundId ? `/inventory/outbound/${outboundId}/` : '/inventory/outbound/';
+        const method = outboundId ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            data: form.serialize(),
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('保存失败：' + xhr.responseText);
+            }
+        });
+    });
+
+    // 确认出库
+    $('#confirmOutbound').click(function() {
+        if (confirm('确认出库后将不能修改，是否继续？')) {
+            const outboundId = $('#outboundId').val();
+            $.post(`/inventory/outbound/${outboundId}/confirm/`, function() {
+                location.reload();
+            }).fail(function(xhr) {
+                alert('确认失败：' + xhr.responseText);
+            });
+        }
+    });
+
+    // 查看出库单
+    $('.view-outbound').click(function() {
+        const outboundId = $(this).data('id');
+        $.get(`/inventory/outbound/${outboundId}/`, function(outbound) {
+            $('#outboundId').val(outbound.id);
+            $('#outboundForm [name=code]').val(outbound.code).prop('readonly', true);
+            $('#outboundForm [name=date]').val(outbound.date).prop('readonly', true);
+            $('#outboundForm [name=customer]').val(outbound.customer).prop('disabled', true);
+            $('#outboundForm [name=remarks]').val(outbound.remarks).prop('readonly', true);
+            
+            // 清空并添加明细行
+            $('#outboundItems').empty();
+            outbound.items.forEach(item => {
+                const itemRow = $('.outbound-item').first().clone();
+                itemRow.find('.product-select').val(item.product).prop('disabled', true);
+                itemRow.find('.quantity').val(item.quantity).prop('readonly', true);
+                itemRow.find('.price').val(item.price).prop('readonly', true);
+                itemRow.find('.amount').val(item.amount);
+                itemRow.find('.remove-item').hide();
+                $('#outboundItems').append(itemRow);
+            });
+            
+            $('#addItem').hide();
+            $('#saveOutbound, #confirmOutbound').hide();
+            $('#outboundModal').modal('show');
+        });
+    });
+
+    // 打印出库单
+    $('.print-outbound').click(function() {
+        const outboundId = $(this).data('id');
+        window.open(`/inventory/outbound/${outboundId}/print/`, '_blank');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">产品型号管理</h5>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal">
+            <i class="fas fa-plus"></i> 添加产品
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>客户</th>
+                        <th>型号</th>
+                        <th>单价</th>
+                        <th>描述</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.customer.name }}</td>
+                        <td>{{ product.model_number }}</td>
+                        <td>{{ product.unit_price }}</td>
+                        <td>{{ product.description }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info edit-product" data-id="{{ product.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-product" data-id="{{ product.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 产品表单模态框 -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">产品信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" id="productId">
+                    <div class="mb-3">
+                        <label class="form-label">产品编号</label>
+                        <input type="text" class="form-control" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">产品名称</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">规格型号</label>
+                        <input type="text" class="form-control" name="specification">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">单位</label>
+                        <input type="text" class="form-control" name="unit" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">单价</label>
+                        <input type="number" class="form-control" name="price" step="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveProduct">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 保存产品信息
+    $('#saveProduct').click(function() {
+        const form = $('#productForm');
+        const productId = $('#productId').val();
+        const url = productId ? `/inventory/products/${productId}/` : '/inventory/products/';
+        const method = productId ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            data: form.serialize(),
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('保存失败：' + xhr.responseText);
+            }
+        });
+    });
+
+    // 编辑产品
+    $('.edit-product').click(function() {
+        const productId = $(this).data('id');
+        $.get(`/inventory/products/${productId}/`, function(product) {
+            $('#productId').val(product.id);
+            $('#productForm [name=code]').val(product.code);
+            $('#productForm [name=name]').val(product.name);
+            $('#productForm [name=specification]').val(product.specification);
+            $('#productForm [name=unit]').val(product.unit);
+            $('#productForm [name=price]').val(product.price);
+            $('#productModal').modal('show');
+        });
+    });
+
+    // 删除产品
+    $('.delete-product').click(function() {
+        if (confirm('确定要删除这个产品吗？')) {
+            const productId = $(this).data('id');
+            $.ajax({
+                url: `/inventory/products/${productId}/`,
+                method: 'DELETE',
+                success: function() {
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('删除失败：' + xhr.responseText);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
