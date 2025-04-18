@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>入库单据管理</h2>
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{% url 'inventory:inbound_add' %}" class="btn btn-primary">添加入库单据</a>
+        <div class="col-md-4">
+            <form class="d-flex" method="get">
+                <input type="text" name="search" class="form-control me-2" placeholder="搜索单据编号或客户名称..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-outline-primary">搜索</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>单据编号</th>
+                    <th>供应商</th>
+                    <th>客户</th>
+                    <th>产品型号</th>
+                    <th>批号</th>
+                    <th>数量</th>
+                    <th>来料日期</th>
+                    <th>审核状态</th>
+                    <th width="150">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inbound in inbounds %}
+                <tr>
+                    <td>{{ inbound.document_number }}</td>
+                    <td>{{ inbound.supplier.name|default:"-" }}</td>
+                    <td>{{ inbound.customer.name }}</td>
+                    <td>{{ inbound.product_type.model_number }}</td>
+                    <td>{{ inbound.batch_number }}</td>
+                    <td>{{ inbound.quantity }}</td>
+                    <td>{{ inbound.shipment_date|date:"Y-m-d" }}</td>
+                    <td>{{ inbound.get_audit_status_display }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'inventory:inbound_detail' inbound.id %}" class="btn btn-info">查看</a>
+                            <a href="{% url 'inventory:inbound_edit' inbound.id %}" class="btn btn-warning">编辑</a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ inbound.id }}">删除</button>
+                        </div>
+
+                        <!-- Delete Modal -->
+                        <div class="modal fade" id="deleteModal{{ inbound.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">确认删除</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>确定要删除这条入库记录吗？此操作不可恢复。</p>
+                                        <ul class="list-unstyled">
+                                            <li>单据编号：{{ inbound.document_number }}</li>
+                                            <li>供应商：{{ inbound.supplier.name|default:"-" }}</li>
+                                            <li>客户：{{ inbound.customer.name }}</li>
+                                            <li>产品型号：{{ inbound.product_type.model_number }}</li>
+                                            <li>批号：{{ inbound.batch_number }}</li>
+                                            <li>数量：{{ inbound.quantity }}</li>
+                                            <li>来料日期：{{ inbound.shipment_date|date:"Y-m-d" }}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form action="{% url 'inventory:inbound_delete' inbound.id %}" method="post" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <button type="submit" class="btn btn-danger">确认删除</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center">暂无入库记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if inbounds.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if inbounds.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ inbounds.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo;</a>
+            </li>
+            {% endif %}
+
+            {% for i in inbounds.paginator.page_range %}
+            <li class="page-item {% if inbounds.number == i %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ i }}</a>
+            </li>
+            {% endfor %}
+
+            {% if inbounds.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ inbounds.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- 确保加载了Bootstrap的JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %} 

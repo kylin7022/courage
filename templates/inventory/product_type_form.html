@@ -5,7 +5,7 @@
     <h2>{{ title }}</h2>
     <form method="post">
         {% csrf_token %}
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label for="{{ form.customer.id_for_label }}">客户</label>
             {{ form.customer }}
             {% if form.customer.errors %}
@@ -13,7 +13,15 @@
             {% endif %}
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-3">
+            <label for="{{ form.name.id_for_label }}">型号名称</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
             <label for="{{ form.model_number.id_for_label }}">型号</label>
             {{ form.model_number }}
             {% if form.model_number.errors %}
@@ -21,7 +29,15 @@
             {% endif %}
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-3">
+            <label for="{{ form.barcode.id_for_label }}">条形码</label>
+            {{ form.barcode }}
+            {% if form.barcode.errors %}
+            <div class="invalid-feedback d-block">{{ form.barcode.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
             <label for="{{ form.unit_price.id_for_label }}">单价</label>
             {{ form.unit_price }}
             {% if form.unit_price.errors %}
@@ -29,7 +45,7 @@
             {% endif %}
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label for="{{ form.description.id_for_label }}">描述</label>
             {{ form.description }}
             {% if form.description.errors %}

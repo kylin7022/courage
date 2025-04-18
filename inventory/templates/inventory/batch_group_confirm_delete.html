@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>确认删除批次组</h2>
+    <div class="alert alert-danger">
+        <p>您确定要删除以下批次组吗？此操作不可恢复。</p>
+        <ul>
+            <li>客户：{{ batch_group.customer.name }}</li>
+            <li>批号：{{ batch_group.batch_number }}</li>
+            <li>型号：{{ batch_group.model_number }}</li>
+            <li>脚距：{{ batch_group.pin_pitch }}</li>
+            <li>生产日期：{{ batch_group.production_date|default:"-" }}</li>
+            <li>有效期至：{{ batch_group.expiration_date|default:"-" }}</li>
+            <li>入库数量：{{ batch_group.quantity }}</li>
+            <li>剩余数量：{{ batch_group.remaining_quantity }}</li>
+            <li>描述：{{ batch_group.description|default:"-" }}</li>
+        </ul>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">确认删除</button>
+        <a href="{% url 'inventory:batch_group_list' %}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %} 

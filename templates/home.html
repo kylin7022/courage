@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}库存管理系统 - 首页{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="jumbotron">
+        <h1 class="display-4">欢迎使用库存管理系统</h1>
+        <p class="lead">这是一个用于管理库存的系统，可以帮助您跟踪产品、供应商和库存情况。</p>
+        <hr class="my-4">
+        <p>点击下面的按钮开始使用系统。</p>
+        <a class="btn btn-primary btn-lg" href="{% url 'inventory:product_type_list' %}" role="button">进入系统</a>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                {% for field in form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% if field.errors %}
+                    <div class="alert alert-danger">
+                        {{ field.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">返回</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 为所有的select元素添加Bootstrap样式
+        document.querySelectorAll('select').forEach(function(select) {
+            select.classList.add('form-select');
+        });
+
+        // 为所有的input元素添加Bootstrap样式
+        document.querySelectorAll('input').forEach(function(input) {
+            if (input.type === 'checkbox') {
+                input.classList.add('form-check-input');
+            } else {
+                input.classList.add('form-control');
+            }
+        });
+
+        // 为所有的textarea元素添加Bootstrap样式
+        document.querySelectorAll('textarea').forEach(function(textarea) {
+            textarea.classList.add('form-control');
+        });
+        
+        // 获取产品型号选择控件和品名规格字段
+        const productTypeSelect = document.getElementById('id_product_type');
+        const productSpecInput = document.getElementById('id_product_spec');
+        
+        // 确保品名规格字段是可编辑的
+        if (productSpecInput) {
+            productSpecInput.readOnly = false;
+        }
+        
+        // 添加产品型号选择变化事件
+        if (productTypeSelect && productSpecInput) {
+            productTypeSelect.addEventListener('change', function() {
+                if (this.value) {
+                    // 发送AJAX请求获取产品型号详情
+                    fetch(`/inventory/api/product-type/${this.value}/`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('网络响应不正常');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // 填充品名规格信息
+                            const specText = data.name + (data.description ? ' - ' + data.description : '');
+                            productSpecInput.value = specText;
+                            
+                            // 自动设置单价
+                            const unitPriceInput = document.getElementById('id_unit_price');
+                            if (unitPriceInput && (!unitPriceInput.value || unitPriceInput.value == '0.00')) {
+                                unitPriceInput.value = data.unit_price;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('获取产品规格信息失败:', error);
+                            alert('获取产品规格信息失败，请重试或手动输入');
+                        });
+                } else {
+                    productSpecInput.value = '';
+                }
+            });
+            
+            // 页面加载时如果已有产品型号被选中，则加载其品名规格
+            if (productTypeSelect.value) {
+                productTypeSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %} 

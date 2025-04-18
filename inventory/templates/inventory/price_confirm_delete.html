@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>确认删除价格记录</h2>
+    <div class="alert alert-danger">
+        <p>您确定要删除以下价格记录吗？此操作不可恢复。</p>
+        <ul>
+            <li>产品型号：{{ price.product_type.model_number }}</li>
+            <li>价格：{{ price.price }}</li>
+            <li>生效日期：{{ price.effective_date }}</li>
+            <li>失效日期：{{ price.expired_date|default:"-" }}</li>
+            <li>备注：{{ price.notes|default:"-" }}</li>
+        </ul>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">确认删除</button>
+        <a href="{% url 'inventory:price_list' %}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %} 

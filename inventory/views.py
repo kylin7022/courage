@@ -1,358 +1,353 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, FileResponse
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.contrib import messages
-from .models import Customer, ProductType, IncomingShipment, OutgoingShipment, BatchGroup, Price
-from .forms import (
-    CustomerForm, ProductTypeForm, IncomingShipmentForm, 
-    OutgoingShipmentForm, BatchGroupForm, PriceForm
-)
-import xlsxwriter
-import io
-import datetime
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Sum, F
+from django.contrib import messages
+import csv
+import datetime
+from decimal import Decimal
 
+from .models import (
+    Customer, 
+    ProductType, 
+    Price, 
+    OutgoingShipment, 
+    IncomingShipment, 
+    BatchGroup, 
+    Inventory
+)
+from .forms import (
+    CustomerForm, 
+    ProductTypeForm, 
+    PriceForm, 
+    OutgoingShipmentForm, 
+    IncomingShipmentForm, 
+    BatchGroupForm
+)
+
+def home(request):
+    """
+    首页视图函数
+    """
+    return render(request, 'home.html')
+
+# 客户管理
+@login_required
 def customer_list(request):
-    search_query = request.GET.get('search', '')
-    customers = Customer.objects.all()
-    if search_query:
-        customers = customers.filter(
-            Q(name__icontains=search_query) |
-            Q(contact__icontains=search_query) |
-            Q(phone__icontains=search_query)
-        )
-    paginator = Paginator(customers, 10)
-    page = request.GET.get('page')
-    customers = paginator.get_page(page)
-    return render(request, 'inventory/customers.html', {'customers': customers, 'search_query': search_query})
+    customers = Customer.objects.all().order_by('-created_at')
+    return render(request, 'inventory/customer_list.html', {'customers': customers})
 
+@login_required
 def customer_add(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, '客户添加成功！')
-                return redirect('inventory:customer_list')
-            except Exception as e:
-                messages.error(request, f'保存失败：{str(e)}')
+            form.save()
+            messages.success(request, '客户添加成功！')
+            return redirect('inventory:customer_list')
     else:
         form = CustomerForm()
     return render(request, 'inventory/customer_form.html', {'form': form, 'title': '添加客户'})
 
+@login_required
 def customer_edit(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
         form = CustomerForm(request.POST, instance=customer)
         if form.is_valid():
             form.save()
-            messages.success(request, '客户信息更新成功！')
+            messages.success(request, '客户更新成功！')
             return redirect('inventory:customer_list')
     else:
         form = CustomerForm(instance=customer)
     return render(request, 'inventory/customer_form.html', {'form': form, 'title': '编辑客户'})
 
+@login_required
 def customer_delete(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     if request.method == 'POST':
         customer.delete()
         messages.success(request, '客户删除成功！')
         return redirect('inventory:customer_list')
-    return render(request, 'inventory/customer_confirm_delete.html', {'customer': customer})
+    return render(request, 'inventory/confirm_delete.html', {'object': customer, 'title': '删除客户'})
 
-def product_list(request):
-    search_query = request.GET.get('search', '')
-    products = ProductType.objects.all().select_related('customer').order_by('-created_at')
-    if search_query:
-        products = products.filter(
-            Q(model_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(products, 10)
-    page = request.GET.get('page')
-    products = paginator.get_page(page)
-    return render(request, 'inventory/product_list.html', {
-        'products': products,
-        'search_query': search_query
-    })
+# 入库单据管理
+@login_required
+def inbound_list(request):
+    inbound_shipments = IncomingShipment.objects.all().order_by('-created_at')
+    return render(request, 'inventory/inbound_list.html', {'inbound_shipments': inbound_shipments})
 
+@login_required
+def inbound_add(request):
+    if request.method == 'POST':
+        form = IncomingShipmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '入库单据添加成功！')
+            return redirect('inventory:inbound_list')
+    else:
+        form = IncomingShipmentForm()
+    return render(request, 'inventory/inbound_form.html', {'form': form, 'title': '添加入库单据'})
+
+@login_required
+def inbound_detail(request, inbound_id):
+    inbound = get_object_or_404(IncomingShipment, id=inbound_id)
+    return render(request, 'inventory/inbound_detail.html', {'inbound': inbound})
+
+@login_required
+def inbound_edit(request, inbound_id):
+    inbound = get_object_or_404(IncomingShipment, id=inbound_id)
+    if request.method == 'POST':
+        form = IncomingShipmentForm(request.POST, instance=inbound)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '入库单据更新成功！')
+            return redirect('inventory:inbound_list')
+    else:
+        form = IncomingShipmentForm(instance=inbound)
+    return render(request, 'inventory/inbound_form.html', {'form': form, 'title': '编辑入库单据'})
+
+@login_required
+def inbound_delete(request, inbound_id):
+    inbound = get_object_or_404(IncomingShipment, id=inbound_id)
+    if request.method == 'POST':
+        inbound.delete()
+        messages.success(request, '入库单据删除成功！')
+        return redirect('inventory:inbound_list')
+    return render(request, 'inventory/confirm_delete.html', {'object': inbound, 'title': '删除入库单据'})
+
+# 出库单据管理
+@login_required
+def outbound_list(request):
+    outbound_shipments = OutgoingShipment.objects.all().order_by('-created_at')
+    return render(request, 'inventory/outbound_list.html', {'outbound_shipments': outbound_shipments})
+
+@login_required
+def outbound_add(request):
+    if request.method == 'POST':
+        form = OutgoingShipmentForm(request.POST)
+        if form.is_valid():
+            outbound = form.save(commit=False)
+            
+            # 如果品名规格未填写，但已选择产品型号，则自动填写
+            if not outbound.product_spec and outbound.product_type:
+                product_type = outbound.product_type
+                outbound.product_spec = f"{product_type.name} - {product_type.description}"
+                
+            outbound.save()
+            messages.success(request, '出库单据添加成功！')
+            return redirect('inventory:outbound_list')
+    else:
+        form = OutgoingShipmentForm()
+    return render(request, 'inventory/outbound_form.html', {'form': form, 'title': '添加出库单据'})
+
+@login_required
+def outbound_detail(request, outbound_id):
+    outbound = get_object_or_404(OutgoingShipment, id=outbound_id)
+    return render(request, 'inventory/outbound_detail.html', {'outbound': outbound})
+
+@login_required
+def outbound_edit(request, outbound_id):
+    outbound = get_object_or_404(OutgoingShipment, id=outbound_id)
+    if request.method == 'POST':
+        form = OutgoingShipmentForm(request.POST, instance=outbound)
+        if form.is_valid():
+            outbound = form.save(commit=False)
+            
+            # 如果品名规格未填写，但已选择产品型号，则自动填写
+            if not outbound.product_spec and outbound.product_type:
+                product_type = outbound.product_type
+                outbound.product_spec = f"{product_type.name} - {product_type.description}"
+                
+            outbound.save()
+            messages.success(request, '出库单据更新成功！')
+            return redirect('inventory:outbound_list')
+    else:
+        form = OutgoingShipmentForm(instance=outbound)
+    return render(request, 'inventory/outbound_form.html', {'form': form, 'title': '编辑出库单据'})
+
+@login_required
+def outbound_delete(request, outbound_id):
+    outbound = get_object_or_404(OutgoingShipment, id=outbound_id)
+    if request.method == 'POST':
+        outbound.delete()
+        messages.success(request, '出库单据删除成功！')
+        return redirect('inventory:outbound_list')
+    return render(request, 'inventory/confirm_delete.html', {'object': outbound, 'title': '删除出库单据'})
+
+# 产品型号管理
+@login_required
 def product_type_list(request):
-    search_query = request.GET.get('search', '')
-    product_types = ProductType.objects.all().select_related('customer').order_by('-created_at')
-    if search_query:
-        product_types = product_types.filter(
-            Q(model_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(product_types, 10)
-    page = request.GET.get('page')
-    product_types = paginator.get_page(page)
-    return render(request, 'inventory/product_type_list.html', {
-        'product_types': product_types,
-        'search_query': search_query
-    })
+    product_types = ProductType.objects.all().order_by('-created_at')
+    return render(request, 'inventory/product_type_list.html', {'product_types': product_types})
 
+@login_required
 def product_type_add(request):
     if request.method == 'POST':
         form = ProductTypeForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, '产品型号添加成功！')
-                return redirect('inventory:product_type_list')
-            except Exception as e:
-                messages.error(request, f'保存失败：{str(e)}')
+            form.save()
+            messages.success(request, '产品型号添加成功！')
+            return redirect('inventory:product_type_list')
     else:
         form = ProductTypeForm()
-    return render(request, 'inventory/product_type_form.html', {
-        'form': form,
-        'title': '添加产品型号'
-    })
+    return render(request, 'inventory/product_type_form.html', {'form': form, 'title': '添加产品型号'})
 
+@login_required
 def product_type_edit(request, product_type_id):
     product_type = get_object_or_404(ProductType, id=product_type_id)
     if request.method == 'POST':
         form = ProductTypeForm(request.POST, instance=product_type)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, '产品型号更新成功！')
-                return redirect('inventory:product_type_list')
-            except Exception as e:
-                messages.error(request, f'保存失败：{str(e)}')
+            form.save()
+            messages.success(request, '产品型号更新成功！')
+            return redirect('inventory:product_type_list')
     else:
         form = ProductTypeForm(instance=product_type)
-    return render(request, 'inventory/product_type_form.html', {
-        'form': form,
-        'title': '编辑产品型号'
-    })
+    return render(request, 'inventory/product_type_form.html', {'form': form, 'title': '编辑产品型号'})
 
-    try:
-        page_size = int(request.GET.get('page_size', 10))  # 允许自定义每页显示数量
-        page_size = min(max(page_size, 1), 100)  # 限制范围在1-100之间
-    except ValueError:
-        page_size = 10
-    
-    paginator = Paginator(products, page_size)
-    
-    try:
-        page = int(request.GET.get('page', 1))
-        products = paginator.page(page)
-    except:
-        products = paginator.page(1)
-    
-    return render(request, 'inventory/products.html', {
-        'products': products,
-        'search_query': search_query,
-        'page_size': page_size
-    })
+@login_required
+def product_type_delete(request, product_type_id):
+    product_type = get_object_or_404(ProductType, id=product_type_id)
+    if request.method == 'POST':
+        product_type.delete()
+        messages.success(request, '产品型号删除成功！')
+        return redirect('inventory:product_type_list')
+    return render(request, 'inventory/confirm_delete.html', {'object': product_type, 'title': '删除产品型号'})
 
+# 价格设置
+@login_required
 def price_list(request):
-    search_query = request.GET.get('search', '')
-    prices = Price.objects.all()  # 需要先创建 Price 模型
-    if search_query:
-        prices = prices.filter(
-            Q(product__model_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(prices, 10)
-    page = request.GET.get('page')
-    prices = paginator.get_page(page)
-    return render(request, 'inventory/prices.html', {'prices': prices, 'search_query': search_query})
-    
-    try:
-        page_size = int(request.GET.get('page_size', 10))  # 允许自定义每页显示数量
-        page_size = min(max(page_size, 1), 100)  # 限制范围在1-100之间
-    except ValueError:
-        page_size = 10
-    
-    paginator = Paginator(products, page_size)
-    
-    try:
-        page = int(request.GET.get('page', 1))
-        products = paginator.page(page)
-    except:
-        products = paginator.page(1)
-    
-    return render(request, 'inventory/products.html', {
-        'products': products,
-        'search_query': search_query,
-        'page_size': page_size
-    })
+    prices = Price.objects.all().order_by('-effective_date')
+    return render(request, 'inventory/price_list.html', {'prices': prices})
 
+@login_required
 def price_add(request):
     if request.method == 'POST':
         form = PriceForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, '价格信息添加成功！')
-                return redirect('inventory:price_list')
-            except Exception as e:
-                messages.error(request, f'保存失败：{str(e)}')
+            form.save()
+            messages.success(request, '价格记录添加成功！')
+            return redirect('inventory:price_list')
     else:
         form = PriceForm()
-    return render(request, 'inventory/price_form.html', {'form': form, 'title': '添加价格'})
-
-def product_add(request):
-    if request.method == 'POST':
-        form = ProductTypeForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '产品添加成功！')
-            return redirect('inventory:product_list')
-    else:
-        form = ProductTypeForm()
-    return render(request, 'inventory/product_form.html', {'form': form, 'title': '添加产品'})
-
-def product_edit(request, product_id):
-    product = get_object_or_404(ProductType, id=product_id)
-    if request.method == 'POST':
-        form = ProductTypeForm(request.POST, instance=product)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '产品信息更新成功！')
-            return redirect('inventory:product_list')
-    else:
-        form = ProductTypeForm(instance=product)
-    return render(request, 'inventory/product_form.html', {'form': form, 'title': '编辑产品'})
-
-def product_delete(request, product_id):
-    product = get_object_or_404(ProductType, id=product_id)
-    if request.method == 'POST':
-        product.delete()
-        messages.success(request, '产品删除成功！')
-        return redirect('inventory:product_list')
-    return render(request, 'inventory/product_confirm_delete.html', {'product': product})
-
-def inbound_list(request):
-    search_query = request.GET.get('search', '')
-    inbounds = IncomingShipment.objects.all()
-    if search_query:
-        inbounds = inbounds.filter(
-            Q(document_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(inbounds, 10)
-    page = request.GET.get('page')
-    inbounds = paginator.get_page(page)
-    return render(request, 'inventory/inbound_list.html', {'inbounds': inbounds, 'search_query': search_query})
-
-def inbound_add(request):
-    if request.method == 'POST':
-        form = IncomingShipmentForm(request.POST)
-        if form.is_valid():
-            try:
-                shipment = form.save(commit=False)
-                if shipment.quantity <= 0:
-                    messages.error(request, '入库数量必须大于0')
-                    return render(request, 'inventory/inbound_form.html', {'form': form, 'title': '添加入库单'})
-                shipment.save()
-                messages.success(request, '入库单添加成功！')
-                return redirect('inventory:inbound_list')
-            except Exception as e:
-                messages.error(request, f'保存失败：{str(e)}')
-    else:
-        form = IncomingShipmentForm()
-    return render(request, 'inventory/inbound_form.html', {'form': form, 'title': '添加入库单'})
-
-def inbound_detail(request, inbound_id):
-    inbound = get_object_or_404(IncomingShipment, id=inbound_id)
-    return render(request, 'inventory/inbound_detail.html', {'inbound': inbound})
-
-def outbound_list(request):
-    search_query = request.GET.get('search', '')
-    outbounds = OutgoingShipment.objects.all()
-    if search_query:
-        outbounds = outbounds.filter(
-            Q(document_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(outbounds, 10)
-    page = request.GET.get('page')
-    outbounds = paginator.get_page(page)
-    return render(request, 'inventory/outbound_list.html', {'outbounds': outbounds, 'search_query': search_query})
-
-def outbound_add(request):
-    if request.method == 'POST':
-        form = OutgoingShipmentForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '出库单添加成功！')
-            return redirect('inventory:outbound_list')
-    else:
-        form = OutgoingShipmentForm()
-    return render(request, 'inventory/outbound_form.html', {'form': form, 'title': '添加出库单'})
-
-def outbound_detail(request, outbound_id):
-    outbound = get_object_or_404(OutgoingShipment, id=outbound_id)
-    return render(request, 'inventory/outbound_detail.html', {'outbound': outbound})
-
-def export_customer_bill(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
-    outbounds = OutgoingShipment.objects.filter(customer=customer)
-    
-    # 创建Excel文件
-    output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet()
-    
-    # 设置表头
-    headers = ['单据编号', '产品型号', '数量', '单价', '总金额', '出库日期']
-    for col, header in enumerate(headers):
-        worksheet.write(0, col, header)
-    
-    # 写入数据
-    for row, outbound in enumerate(outbounds, 1):
-        worksheet.write(row, 0, outbound.document_number)
-        worksheet.write(row, 1, outbound.product_type.model_number)
-        worksheet.write(row, 2, outbound.quantity)
-        worksheet.write(row, 3, float(outbound.unit_price))
-        worksheet.write(row, 4, float(outbound.total_amount))
-        worksheet.write(row, 5, outbound.shipment_date.strftime('%Y-%m-%d'))
-    
-    workbook.close()
-    output.seek(0)
-    
-    # 设置响应
-    response = HttpResponse(output.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="bill_{customer_id}.xlsx"'
-    return response
-
+    return render(request, 'inventory/price_form.html', {'form': form, 'title': '添加价格记录'})
 
 @login_required
 def price_edit(request, price_id):
-    price = get_object_or_404(Price, pk=price_id)
+    price = get_object_or_404(Price, id=price_id)
     if request.method == 'POST':
         form = PriceForm(request.POST, instance=price)
         if form.is_valid():
             form.save()
-            return redirect('price_list')
+            messages.success(request, '价格记录更新成功！')
+            return redirect('inventory:price_list')
     else:
         form = PriceForm(instance=price)
-    return render(request, 'inventory/price_form.html', {
-        'form': form,
-        'title': '编辑价格记录'
-    })
+    return render(request, 'inventory/price_form.html', {'form': form, 'title': '编辑价格记录'})
 
+@login_required
+def price_delete(request, price_id):
+    price = get_object_or_404(Price, id=price_id)
+    if request.method == 'POST':
+        price.delete()
+        messages.success(request, '价格记录删除成功！')
+        return redirect('inventory:price_list')
+    return render(request, 'inventory/confirm_delete.html', {'object': price, 'title': '删除价格记录'})
+
+# 导出账单
+@login_required
+def export_customer_bill(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    
+    # 获取该客户的所有出货记录
+    outgoing_shipments = OutgoingShipment.objects.filter(customer=customer).order_by('shipping_date')
+    
+    # 创建Excel响应
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = f'attachment; filename="{customer.name}_bill.xls"'
+    
+    # 添加BOM标记，解决Excel中文显示乱码问题
+    response.write(u'\ufeff'.encode('utf-8'))
+    
+    # 创建CSV写入器
+    writer = csv.writer(response, delimiter='\t')
+    writer.writerow(['出货日期', '型号', '品名规格', '批号', '批次组', '针距', '数量', '单价', '总金额', '备注'])
+    
+    for shipment in outgoing_shipments:
+        writer.writerow([
+            shipment.shipping_date.strftime('%Y-%m-%d'),
+            shipment.product_type.model_number,
+            shipment.product_spec,
+            shipment.batch_number,
+            shipment.batch_group,
+            shipment.pin_pitch,
+            shipment.quantity,
+            f"{shipment.unit_price:.2f}",
+            f"{shipment.total_amount:.2f}",
+            shipment.notes
+        ])
+    
+    return response
+
+@login_required
+def export_monthly_bill(request, customer_id, year, month):
+    customer = get_object_or_404(Customer, id=customer_id)
+    
+    # 构造日期范围
+    start_date = datetime.date(year, month, 1)
+    if month == 12:
+        end_date = datetime.date(year + 1, 1, 1)
+    else:
+        end_date = datetime.date(year, month + 1, 1)
+    
+    # 获取该客户在指定月份的所有出货记录
+    outgoing_shipments = OutgoingShipment.objects.filter(
+        customer=customer,
+        shipping_date__gte=start_date,
+        shipping_date__lt=end_date
+    ).order_by('shipping_date')
+    
+    # 创建Excel响应
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = f'attachment; filename="{customer.name}_{year}_{month}_monthly_bill.xls"'
+    
+    # 添加BOM标记，解决Excel中文显示乱码问题
+    response.write(u'\ufeff'.encode('utf-8'))
+    
+    # 创建CSV写入器
+    writer = csv.writer(response, delimiter='\t')
+    writer.writerow(['出货日期', '型号', '品名规格', '批号', '批次组', '针距', '数量', '单价', '总金额', '备注'])
+    
+    total_amount = Decimal('0.00')
+    
+    for shipment in outgoing_shipments:
+        writer.writerow([
+            shipment.shipping_date.strftime('%Y-%m-%d'),
+            shipment.product_type.model_number,
+            shipment.product_spec,
+            shipment.batch_number,
+            shipment.batch_group,
+            shipment.pin_pitch,
+            shipment.quantity,
+            f"{shipment.unit_price:.2f}",
+            f"{shipment.total_amount:.2f}",
+            shipment.notes
+        ])
+        total_amount += shipment.total_amount
+    
+    # 写入总计行
+    writer.writerow(['', '', '', '', '', '', '', '总计', f"{total_amount:.2f}", ''])
+    
+    return response
+
+# 批次组管理
+@login_required
 def batch_group_list(request):
-    search_query = request.GET.get('search', '')
-    batch_groups = BatchGroup.objects.all().select_related('customer')
-    if search_query:
-        batch_groups = batch_groups.filter(
-            Q(batch_number__icontains=search_query) |
-            Q(model_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
-        )
-    paginator = Paginator(batch_groups, 10)
-    page = request.GET.get('page')
-    batch_groups = paginator.get_page(page)
-    return render(request, 'inventory/batch_groups.html', {
-        'batch_groups': batch_groups, 
-        'search_query': search_query
-    })
+    batch_groups = BatchGroup.objects.all().order_by('-created_at')
+    return render(request, 'inventory/batch_group_list.html', {'batch_groups': batch_groups})
 
+@login_required
 def batch_group_add(request):
     if request.method == 'POST':
         form = BatchGroupForm(request.POST)
@@ -362,11 +357,9 @@ def batch_group_add(request):
             return redirect('inventory:batch_group_list')
     else:
         form = BatchGroupForm()
-    return render(request, 'inventory/batch_group_form.html', {
-        'form': form, 
-        'title': '添加批次组'
-    })
+    return render(request, 'inventory/batch_group_form.html', {'form': form, 'title': '添加批次组'})
 
+@login_required
 def batch_group_edit(request, group_id):
     batch_group = get_object_or_404(BatchGroup, id=group_id)
     if request.method == 'POST':
@@ -377,78 +370,31 @@ def batch_group_edit(request, group_id):
             return redirect('inventory:batch_group_list')
     else:
         form = BatchGroupForm(instance=batch_group)
-    return render(request, 'inventory/batch_group_form.html', {
-        'form': form, 
-        'title': '编辑批次组'
-    })
+    return render(request, 'inventory/batch_group_form.html', {'form': form, 'title': '编辑批次组'})
 
-def export_monthly_bill(request, customer_id, year, month):
-    customer = get_object_or_404(Customer, id=customer_id)
-    start_date = datetime.date(year, month, 1)
-    end_date = (start_date + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1)
-    
-    outbounds = OutgoingShipment.objects.filter(
-        customer=customer,
-        shipment_date__range=[start_date, end_date]
-    ).order_by('shipment_date')
-    
-    # 创建Excel文件
-    output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet()
-    
-    # 设置表头样式
-    header_format = workbook.add_format({
-        'bold': True,
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1
-    })
-    
-    # 设置单元格样式
-    cell_format = workbook.add_format({
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1
-    })
-    
-    # 写入标题
-    worksheet.merge_range('A1:G1', f'{year}年{month}月份对账单', header_format)
-    worksheet.write('A2', f'客户：{customer.name}', cell_format)
-    worksheet.write('D2', f'起止日期：{start_date.strftime("%Y/%m/%d")}-{end_date.strftime("%Y/%m/%d")}', cell_format)
-    worksheet.write('F2', '月结方式：当月结', cell_format)
-    worksheet.write('G2', '币别：人民币', cell_format)
-    
-    # 设置表头
-    headers = ['日期', '送单号码', '批号', '品名规格', '数量(K)', '脚距(mm)', '单价', '金额']
-    for col, header in enumerate(headers):
-        worksheet.write(3, col, header, header_format)
-    
-    # 写入数据
-    row = 4
-    total_amount = 0
-    for outbound in outbounds:
-        worksheet.write(row, 0, outbound.shipment_date.strftime('%Y/%m/%d'), cell_format)
-        worksheet.write(row, 1, outbound.document_number, cell_format)
-        worksheet.write(row, 2, outbound.batch_group.batch_number if hasattr(outbound, 'batch_group') else '', cell_format)
-        worksheet.write(row, 3, outbound.product_type.model_number, cell_format)
-        worksheet.write(row, 4, outbound.quantity, cell_format)
-        worksheet.write(row, 5, outbound.batch_group.pin_pitch if hasattr(outbound, 'batch_group') else '', cell_format)
-        worksheet.write(row, 6, float(outbound.unit_price), cell_format)
-        worksheet.write(row, 7, float(outbound.total_amount), cell_format)
-        total_amount += float(outbound.total_amount)
-        row += 1
-    
-    # 写入合计
-    worksheet.write(row, 6, '合计：', header_format)
-    worksheet.write(row, 7, total_amount, header_format)
-    
-    workbook.close()
-    output.seek(0)
-    
-    response = HttpResponse(
-        output.read(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="{customer.name}_{year}{month}月账单.xlsx"'
-    return response
+@login_required
+def batch_group_delete(request, group_id):
+    batch_group = get_object_or_404(BatchGroup, id=group_id)
+    if request.method == 'POST':
+        batch_group.delete()
+        messages.success(request, '批次组删除成功！')
+        return redirect('inventory:batch_group_list')
+    return render(request, 'inventory/confirm_delete.html', {'object': batch_group, 'title': '删除批次组'})
+
+# API视图
+@login_required
+def product_type_detail_api(request, product_type_id):
+    """
+    获取产品型号详细信息的API
+    """
+    product_type = get_object_or_404(ProductType, id=product_type_id)
+    data = {
+        'id': product_type.id,
+        'name': product_type.name,
+        'model_number': product_type.model_number,
+        'description': product_type.description,
+        'unit_price': float(product_type.unit_price),
+        'customer_id': product_type.customer.id,
+        'customer_name': product_type.customer.name
+    }
+    return JsonResponse(data) 

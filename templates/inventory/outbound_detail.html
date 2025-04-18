@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">出库单详情</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5>基本信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">单据编号</th>
+                            <td>{{ outbound.document_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>出货日期</th>
+                            <td>{{ outbound.shipping_date|date:"Y-m-d" }}</td>
+                        </tr>
+                        <tr>
+                            <th>客户名称</th>
+                            <td>{{ outbound.customer.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>选单号码</th>
+                            <td>{{ outbound.customer_part_number }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>产品信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">品名规格</th>
+                            <td>{{ outbound.product_type.model_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>名字</th>
+                            <td>{{ outbound.product_type.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>批号</th>
+                            <td>{{ outbound.batch_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>数量</th>
+                            <td>{{ outbound.quantity }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>价格信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">单价</th>
+                            <td>{{ outbound.unit_price }}</td>
+                        </tr>
+                        <tr>
+                            <th>总金额</th>
+                            <td>{{ outbound.total_amount }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>其他信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">脚距</th>
+                            <td>{{ outbound.batch_group.pin_pitch|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>备注</th>
+                            <td>{{ outbound.notes|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">返回列表</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

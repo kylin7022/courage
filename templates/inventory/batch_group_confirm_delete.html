@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>确认删除</h2>
+    <div class="alert alert-danger">
+        <p>您确定要删除以下批次组吗？</p>
+        <ul>
+            <li>客户：{{ batch_group.customer }}</li>
+            <li>批号：{{ batch_group.batch_number }}</li>
+            <li>型号：{{ batch_group.model_number }}</li>
+            <li>针距：{{ batch_group.pin_pitch }}</li>
+        </ul>
+        <p>此操作不可恢复！</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">确认删除</button>
+        <a href="{% url 'inventory:batch_group_list' %}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %} 

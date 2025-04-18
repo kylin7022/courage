@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>确认删除</h2>
+    <div class="alert alert-danger">
+        <p>您确定要删除以下出库单据吗？</p>
+        <ul>
+            <li>客户：{{ outbound.customer }}</li>
+            <li>产品型号：{{ outbound.product_type }}</li>
+            <li>批号：{{ outbound.batch_number }}</li>
+            <li>数量：{{ outbound.quantity }}</li>
+            <li>出货日期：{{ outbound.shipping_date }}</li>
+        </ul>
+        <p>此操作不可恢复！</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">确认删除</button>
+        <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %} 

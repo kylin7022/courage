@@ -8,7 +8,7 @@
         <div class="col">
             <form class="form-inline" method="get">
                 <div class="input-group">
-                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索型号或客户名称">
+                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索型号或名称">
                     <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="submit">搜索</button>
                     </div>
@@ -24,20 +24,20 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>客户</th>
+                    <th>名称</th>
                     <th>型号</th>
-                    <th>单价</th>
-                    <th>创建时间</th>
+                    <th>条形码</th>
+                    <th>描述</th>
                     <th>操作</th>
                 </tr>
             </thead>
             <tbody>
                 {% for product in products %}
                 <tr>
-                    <td>{{ product.customer.name }}</td>
+                    <td>{{ product.name }}</td>
                     <td>{{ product.model_number }}</td>
-                    <td>{{ product.unit_price }}</td>
-                    <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ product.barcode }}</td>
+                    <td>{{ product.description|default:"-" }}</td>
                     <td>
                         <a href="{% url 'inventory:product_edit' product.id %}" class="btn btn-sm btn-info">编辑</a>
                         <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-sm btn-danger">删除</a>

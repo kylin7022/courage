@@ -5,80 +5,133 @@
     <h2>{{ title }}</h2>
     <form method="post">
         {% csrf_token %}
-        <div class="form-group">
-            <label for="{{ form.document_number.id_for_label }}">单据编号</label>
-            {{ form.document_number }}
-            {% if form.document_number.errors %}
-            <div class="invalid-feedback d-block">{{ form.document_number.errors.0 }}</div>
-            {% endif %}
-        </div>
-        
-        <div class="form-group">
-            <label for="{{ form.customer.id_for_label }}">客户</label>
-            {{ form.customer }}
-            {% if form.customer.errors %}
-            <div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.product_type.id_for_label }}">产品型号</label>
-            {{ form.product_type }}
-            {% if form.product_type.errors %}
-            <div class="invalid-feedback d-block">{{ form.product_type.errors.0 }}</div>
-            {% endif %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.shipping_date.id_for_label }}">出货日期</label>
+                    {{ form.shipping_date }}
+                    {% if form.shipping_date.errors %}
+                    <div class="invalid-feedback d-block">{{ form.shipping_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.customer.id_for_label }}">客户</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                    <div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="{{ form.quantity.id_for_label }}">数量</label>
-            {{ form.quantity }}
-            {% if form.quantity.errors %}
-            <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-            {% endif %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.product_type.id_for_label }}">品名规格</label>
+                    {{ form.product_type }}
+                    {% if form.product_type.errors %}
+                    <div class="invalid-feedback d-block">{{ form.product_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.customer_part_number.id_for_label }}">选单号码</label>
+                    {{ form.customer_part_number }}
+                    {% if form.customer_part_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.customer_part_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="{{ form.shipment_date.id_for_label }}">出货日期</label>
-            {{ form.shipment_date }}
-            {% if form.shipment_date.errors %}
-            <div class="invalid-feedback d-block">{{ form.shipment_date.errors.0 }}</div>
-            {% endif %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.batch_number.id_for_label }}">批号</label>
+                    {{ form.batch_number }}
+                    {% if form.batch_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.batch_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.batch_group.id_for_label }}">批次组</label>
+                    {{ form.batch_group }}
+                    {% if form.batch_group.errors %}
+                    <div class="invalid-feedback d-block">{{ form.batch_group.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="{{ form.batch_group.id_for_label }}">批次组</label>
-            {{ form.batch_group }}
-            {% if form.batch_group.errors %}
-            <div class="invalid-feedback d-block">{{ form.batch_group.errors.0 }}</div>
-            {% endif %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.pin_pitch.id_for_label }}">脚距</label>
+                    {{ form.pin_pitch }}
+                    {% if form.pin_pitch.errors %}
+                    <div class="invalid-feedback d-block">{{ form.pin_pitch.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.quantity.id_for_label }}">数量</label>
+                    {{ form.quantity }}
+                    {% if form.quantity.errors %}
+                    <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.unit_weight.id_for_label }}">单重(g)</label>
+                    {{ form.unit_weight }}
+                    {% if form.unit_weight.errors %}
+                    <div class="invalid-feedback d-block">{{ form.unit_weight.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.unit_price.id_for_label }}">单价</label>
+                    {{ form.unit_price }}
+                    {% if form.unit_price.errors %}
+                    <div class="invalid-feedback d-block">{{ form.unit_price.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mb-3">
             <label for="{{ form.notes.id_for_label }}">备注</label>
             {{ form.notes }}
+            {% if form.notes.errors %}
+            <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+            {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-primary">保存</button>
-        <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">返回</a>
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">返回</a>
+        </div>
     </form>
 </div>
 
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // 当客户选择改变时更新产品型号和批次组的选项
+    // 当客户选择改变时更新批次组的选项
     $('#id_customer').change(function() {
         var customerId = $(this).val();
         if (customerId) {
-            // 更新产品型号下拉列表
-            $.get('/inventory/api/product-types/' + customerId + '/', function(data) {
-                var options = '<option value="">---------</option>';
-                data.forEach(function(item) {
-                    options += '<option value="' + item.id + '">' + item.model_number + '</option>';
-                });
-                $('#id_product_type').html(options);
-            });
-
             // 更新批次组下拉列表
             $.get('/inventory/api/batch-groups/' + customerId + '/', function(data) {
                 var options = '<option value="">---------</option>';

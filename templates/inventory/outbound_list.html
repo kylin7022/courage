@@ -8,7 +8,7 @@
         <div class="col">
             <form class="form-inline" method="get">
                 <div class="input-group">
-                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索单据编号或客户名称">
+                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="搜索客户名称">
                     <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="submit">搜索</button>
                     </div>
@@ -24,29 +24,33 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>单据编号</th>
                     <th>客户</th>
-                    <th>产品型号</th>
+                    <th>选单号码</th>
+                    <th>品名规格</th>
+                    <th>名字</th>
                     <th>数量</th>
-                    <th>出库日期</th>
+                    <th>单价</th>
+                    <th>出货日期</th>
                     <th>操作</th>
                 </tr>
             </thead>
             <tbody>
                 {% for outbound in outbounds %}
                 <tr>
-                    <td>{{ outbound.document_number }}</td>
                     <td>{{ outbound.customer.name }}</td>
-                    <td>{{ outbound.product_type.model_number }}</td>
+                    <td>{{ outbound.customer_part_number }}</td>
+                    <td>{{ outbound.product_type }}</td>
+                    <td>{{ outbound.product_type.name }}</td>
                     <td>{{ outbound.quantity }}</td>
-                    <td>{{ outbound.shipment_date|date:"Y-m-d" }}</td>
+                    <td>{{ outbound.unit_price }}</td>
+                    <td>{{ outbound.shipping_date|date:"Y-m-d" }}</td>
                     <td>
                         <a href="{% url 'inventory:outbound_detail' outbound.id %}" class="btn btn-sm btn-info">详情</a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center">暂无出库记录</td>
+                    <td colspan="8" class="text-center">暂无出库记录</td>
                 </tr>
                 {% endfor %}
             </tbody>
