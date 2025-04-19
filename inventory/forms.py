@@ -16,15 +16,31 @@ class CustomerForm(forms.ModelForm):
         model = Customer
         fields = ['name', 'contact', 'phone', 'address', 'batch_number', 'model_spec', 'pin_pitch', 'unit_price']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'contact': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'batch_number': forms.TextInput(attrs={'class': 'form-control'}),
             'model_spec': forms.TextInput(attrs={'class': 'form-control'}),
             'pin_pitch': forms.TextInput(attrs={'class': 'form-control'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+            'unit_price': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01',
+                'required': False,  # 设置为非必填
+                'initial': 0  # 设置默认值为0
+            })
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['unit_price'].required = False  # 设置字段为非必填
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if 'unit_price' in cleaned_data and cleaned_data['unit_price'] is not None:
+            if cleaned_data['unit_price'] < 0:
+                raise forms.ValidationError('单价不能为负数')
+        return cleaned_data
 
 class SupplierForm(forms.ModelForm):
     class Meta:

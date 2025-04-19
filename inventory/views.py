@@ -6,6 +6,7 @@ from django.contrib import messages
 import csv
 import datetime
 from decimal import Decimal
+from django.urls import reverse
 
 from .models import (
     Customer, 
@@ -42,13 +43,25 @@ def customer_list(request):
 def customer_add(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
+        print("POST data:", request.POST)  # 添加调试信息
         if form.is_valid():
-            form.save()
-            messages.success(request, '客户添加成功！')
-            return redirect('inventory:customer_list')
+            try:
+                print("Form is valid, cleaned data:", form.cleaned_data)  # 添加调试信息
+                customer = form.save()
+                messages.success(request, '客户添加成功！')
+                return redirect('inventory:customer_list')
+            except Exception as e:
+                print(f"Error saving customer: {str(e)}")  # 添加调试信息
+                messages.error(request, f'保存失败：{str(e)}')
+        else:
+            print("Form errors:", form.errors)  # 添加调试信息
     else:
         form = CustomerForm()
-    return render(request, 'inventory/customer_form.html', {'form': form, 'title': '添加客户'})
+    return render(request, 'inventory/customer_form.html', {
+        'form': form, 
+        'title': '添加客户',
+        'submit_url': reverse('inventory:customer_add')
+    })
 
 @login_required
 def customer_edit(request, customer_id):
@@ -262,7 +275,7 @@ def export_customer_bill(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     
     # 获取该客户的所有出货记录
-    outgoing_shipments = OutgoingShipment.objects.filter(customer=customer).order_by('shipping_date')
+    outgoing_shipments = OutgoingShipment.objects.filter(customer=customer).order_by('shipment_date')  # 修改这里
     
     # 创建Excel响应
     response = HttpResponse(content_type='application/vnd.ms-excel')
