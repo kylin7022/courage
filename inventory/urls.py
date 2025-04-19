@@ -41,9 +41,9 @@ urlpatterns = [
     
     # 批次组管理
     path('batch-groups/', views.batch_group_list, name='batch_group_list'),
-    path('batch-groups/add/', views.batch_group_add, name='batch_group_add'),
-    path('batch-groups/<int:group_id>/edit/', views.batch_group_edit, name='batch_group_edit'),
-    path('batch-groups/<int:group_id>/delete/', views.batch_group_delete, name='batch_group_delete'),
+    path('batch-groups/add/', views.batch_group_create, name='batch_group_create'),
+    path('batch-groups/<int:pk>/update/', views.batch_group_update, name='batch_group_update'),
+    path('batch-groups/<int:pk>/delete/', views.batch_group_delete, name='batch_group_delete'),
     path('customers/<int:customer_id>/export-monthly-bill/<int:year>/<int:month>/', 
          views.export_monthly_bill, name='export_monthly_bill'),
          

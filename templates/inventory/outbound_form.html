@@ -5,16 +5,30 @@
     <h2>{{ title }}</h2>
     <form method="post">
         {% csrf_token %}
+        <!-- 第一行：单据编号和出货日期 -->
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
-                    <label for="{{ form.shipping_date.id_for_label }}">出货日期</label>
-                    {{ form.shipping_date }}
-                    {% if form.shipping_date.errors %}
-                    <div class="invalid-feedback d-block">{{ form.shipping_date.errors.0 }}</div>
+                    <label for="{{ form.document_number.id_for_label }}">单据编号</label>
+                    {{ form.document_number }}
+                    {% if form.document_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.document_number.errors.0 }}</div>
                     {% endif %}
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.shipment_date.id_for_label }}">出货日期</label>
+                    {{ form.shipment_date }}
+                    {% if form.shipment_date.errors %}
+                    <div class="invalid-feedback d-block">{{ form.shipment_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行：客户和选单号码 -->
+        <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
                     <label for="{{ form.customer.id_for_label }}">客户</label>
@@ -24,8 +38,18 @@
                     {% endif %}
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.order_number.id_for_label }}">选单号码</label>
+                    {{ form.order_number }}
+                    {% if form.order_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.order_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
+        <!-- 第三行：品名规格和批号 -->
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
@@ -38,18 +62,6 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group mb-3">
-                    <label for="{{ form.customer_part_number.id_for_label }}">选单号码</label>
-                    {{ form.customer_part_number }}
-                    {% if form.customer_part_number.errors %}
-                    <div class="invalid-feedback d-block">{{ form.customer_part_number.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group mb-3">
                     <label for="{{ form.batch_number.id_for_label }}">批号</label>
                     {{ form.batch_number }}
                     {% if form.batch_number.errors %}
@@ -57,6 +69,9 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+
+        <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
                     <label for="{{ form.batch_group.id_for_label }}">批次组</label>
@@ -128,17 +143,16 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // 当客户选择改变时更新批次组的选项
+    // 当客户选择改变时更新产品型号的选项
     $('#id_customer').change(function() {
         var customerId = $(this).val();
         if (customerId) {
-            // 更新批次组下拉列表
-            $.get('/inventory/api/batch-groups/' + customerId + '/', function(data) {
+            $.get('/inventory/api/product-types/' + customerId + '/', function(data) {
                 var options = '<option value="">---------</option>';
                 data.forEach(function(item) {
-                    options += '<option value="' + item.id + '">' + item.batch_number + ' - ' + item.model_number + '</option>';
+                    options += '<option value="' + item.id + '">' + item.model_number + '</option>';
                 });
-                $('#id_batch_group').html(options);
+                $('#id_product_type').html(options);
             });
         }
     });

@@ -127,14 +127,35 @@ class Price(models.Model):
         verbose_name = '价格记录'
         verbose_name_plural = '价格记录'
 
+class BatchGroup(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='客户')
+    batch_number = models.CharField('批号', max_length=50)
+    model_number = models.CharField('型号', max_length=100)
+    pin_pitch = models.CharField('针距', max_length=50, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.customer.name} - {self.batch_number}'
+
+    class Meta:
+        verbose_name = '批次组'
+        verbose_name_plural = '批次组'
+
 class OutgoingShipment(models.Model):
     document_number = models.CharField('单据编号', max_length=50)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='客户')
     product_type = models.ForeignKey(ProductType, on_delete=models.CASCADE, verbose_name='产品型号')
     batch_number = models.CharField('批号', max_length=50)
+    shipment_date = models.DateField('出货日期', default=timezone.now)
+    order_number = models.CharField('选单号码', max_length=50, blank=True)  # 添加选单号码字段
     quantity = models.IntegerField('数量')
     unit_price = models.DecimalField('单价', max_digits=10, decimal_places=2)
     total_amount = models.DecimalField('总金额', max_digits=12, decimal_places=2)
+    pin_pitch = models.CharField('脚距', max_length=50, blank=True)
+    unit_weight = models.DecimalField('单重(g)', max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField('备注', blank=True)
+    batch_group = models.ForeignKey(BatchGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='批次组')
+    # 保持原有字段
     AUDIT_STATUS_CHOICES = [
         ('PENDING', '待审核'),
         ('APPROVED', '已审核'),
@@ -158,20 +179,6 @@ class OutgoingShipment(models.Model):
     class Meta:
         verbose_name = '出货单据'
         verbose_name_plural = '出货单据'
-
-class BatchGroup(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='客户')
-    batch_number = models.CharField('批号', max_length=50)
-    model_number = models.CharField('型号', max_length=100)
-    pin_pitch = models.CharField('针距', max_length=50, blank=True)
-    created_at = models.DateTimeField('创建时间', auto_now_add=True)
-
-    def __str__(self):
-        return f'{self.customer.name} - {self.batch_number}'
-
-    class Meta:
-        verbose_name = '批次组'
-        verbose_name_plural = '批次组'
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver

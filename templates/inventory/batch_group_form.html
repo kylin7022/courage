@@ -1,1 +1,56 @@
- 
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.customer.id_for_label }}">客户</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                    <div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.batch_number.id_for_label }}">批号</label>
+                    {{ form.batch_number }}
+                    {% if form.batch_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.batch_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.model_number.id_for_label }}">型号</label>
+                    {{ form.model_number }}
+                    {% if form.model_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.model_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="{{ form.pin_pitch.id_for_label }}">针距</label>
+                    {{ form.pin_pitch }}
+                    {% if form.pin_pitch.errors %}
+                    <div class="invalid-feedback d-block">{{ form.pin_pitch.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% url 'inventory:batch_group_list' %}" class="btn btn-secondary">返回</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

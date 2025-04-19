@@ -72,17 +72,47 @@ class IncomingShipmentForm(forms.ModelForm):
         return quantity
 
 class OutgoingShipmentForm(forms.ModelForm):
+    # 在类的开头添加选单号码字段
+    order_number = forms.CharField(
+        label='选单号码',
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = OutgoingShipment
-        fields = ['document_number', 'customer', 'product_type', 'batch_number', 'quantity', 'unit_price']
+        fields = [
+            'document_number', 
+            'customer', 
+            'product_type', 
+            'batch_number',
+            'shipment_date',
+            'order_number',   # 保留这个字段
+            'quantity', 
+            'unit_price',
+            'pin_pitch',
+            'unit_weight',
+            'batch_group',
+            'notes'
+        ]
         widgets = {
             'document_number': forms.TextInput(attrs={'class': 'form-control'}),
             'customer': forms.Select(attrs={'class': 'form-control'}),
             'product_type': forms.Select(attrs={'class': 'form-control'}),
             'batch_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'shipment_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'order_number': forms.TextInput(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
-        }
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pin_pitch': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'batch_group': forms.Select(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+        }  # 添加这个闭合的大括号
 
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
@@ -132,5 +162,4 @@ class PriceForm(forms.ModelForm):
             'product_type': forms.Select(attrs={'class': 'form-control'}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'effective_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
-        }   
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})}

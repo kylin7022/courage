@@ -24,6 +24,7 @@ from .forms import (
     IncomingShipmentForm, 
     BatchGroupForm
 )
+from django.core.paginator import Paginator
 
 def home(request):
     """
@@ -344,42 +345,54 @@ def export_monthly_bill(request, customer_id, year, month):
 # 批次组管理
 @login_required
 def batch_group_list(request):
-    batch_groups = BatchGroup.objects.all().order_by('-created_at')
-    return render(request, 'inventory/batch_group_list.html', {'batch_groups': batch_groups})
+    batch_group_list = BatchGroup.objects.all().order_by('-created_at')
+    paginator = Paginator(batch_group_list, 10)  # 每页显示10条记录
+    
+    page = request.GET.get('page')
+    batch_groups = paginator.get_page(page)
+    
+    return render(request, 'inventory/batch_group_list.html', {
+        'batch_groups': batch_groups,
+        'page_obj': batch_groups,  # 添加这行
+        'title': '批次管理'
+    })
 
-@login_required
-def batch_group_add(request):
+def batch_group_create(request):
     if request.method == 'POST':
         form = BatchGroupForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, '批次组添加成功！')
+            messages.success(request, '批次创建成功')
             return redirect('inventory:batch_group_list')
     else:
         form = BatchGroupForm()
-    return render(request, 'inventory/batch_group_form.html', {'form': form, 'title': '添加批次组'})
+    
+    return render(request, 'inventory/batch_group_form.html', {
+        'form': form,
+        'title': '新增批次'
+    })
 
-@login_required
-def batch_group_edit(request, group_id):
-    batch_group = get_object_or_404(BatchGroup, id=group_id)
+def batch_group_update(request, pk):
+    batch_group = get_object_or_404(BatchGroup, pk=pk)
     if request.method == 'POST':
         form = BatchGroupForm(request.POST, instance=batch_group)
         if form.is_valid():
             form.save()
-            messages.success(request, '批次组更新成功！')
+            messages.success(request, '批次更新成功')
             return redirect('inventory:batch_group_list')
     else:
         form = BatchGroupForm(instance=batch_group)
-    return render(request, 'inventory/batch_group_form.html', {'form': form, 'title': '编辑批次组'})
+    
+    return render(request, 'inventory/batch_group_form.html', {
+        'form': form,
+        'title': '编辑批次'
+    })
 
-@login_required
-def batch_group_delete(request, group_id):
-    batch_group = get_object_or_404(BatchGroup, id=group_id)
-    if request.method == 'POST':
-        batch_group.delete()
-        messages.success(request, '批次组删除成功！')
-        return redirect('inventory:batch_group_list')
-    return render(request, 'inventory/confirm_delete.html', {'object': batch_group, 'title': '删除批次组'})
+def batch_group_delete(request, pk):
+    batch_group = get_object_or_404(BatchGroup, pk=pk)
+    batch_group.delete()
+    messages.success(request, '批次删除成功')
+    return redirect('inventory:batch_group_list')
 
 # API视图
 @login_required
@@ -397,4 +410,4 @@ def product_type_detail_api(request, product_type_id):
         'customer_id': product_type.customer.id,
         'customer_name': product_type.customer.name
     }
-    return JsonResponse(data) 
+    return JsonResponse(data)
