@@ -44,9 +44,8 @@ urlpatterns = [
     path('batch-groups/add/', views.batch_group_create, name='batch_group_create'),
     path('batch-groups/<int:pk>/update/', views.batch_group_update, name='batch_group_update'),
     path('batch-groups/<int:pk>/delete/', views.batch_group_delete, name='batch_group_delete'),
-    path('customers/<int:customer_id>/export-monthly-bill/<int:year>/<int:month>/', 
-         views.export_monthly_bill, name='export_monthly_bill'),
+    path('customers/<int:customer_id>/export-monthly-bill/', views.export_monthly_bill, name='export_monthly_bill'),
          
     # API接口
-    path('api/product-type/<int:product_type_id>/', views.product_type_detail_api, name='product_type_detail_api'),
+    path('api/product-types/<int:product_type_id>/', views.product_type_detail_api, name='product_type_detail_api'),
 ]

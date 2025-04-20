@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>{{ title }}</h3>
+        </div>
+        <div class="card-body">
+            <p class="alert alert-danger">
+                确定要删除这条记录吗？此操作不可恢复！
+            </p>
+            
+            <div class="mb-3">
+                <strong>客户：</strong> {{ object.customer.name }}<br>
+                <strong>单据编号：</strong> {{ object.document_number }}<br>
+                <strong>品名规格：</strong> {{ object.product_spec }}<br>
+                <strong>数量：</strong> {{ object.quantity }}<br>
+                <strong>出货日期：</strong> {{ object.shipment_date|date:"Y-m-d" }}
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">确认删除</button>
+                <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">取消</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

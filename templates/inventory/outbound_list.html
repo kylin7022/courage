@@ -25,9 +25,9 @@
             <thead>
                 <tr>
                     <th>客户</th>
-                    <th>选单号码</th>
+                    <th>送单号码</th>
                     <th>品名规格</th>
-                    <th>名字</th>
+                    <th>批次组</th>
                     <th>数量</th>
                     <th>单价</th>
                     <th>出货日期</th>
@@ -35,17 +35,20 @@
                 </tr>
             </thead>
             <tbody>
-                {% for outbound in outbounds %}
+                {% for outbound in outbound_shipments %}
                 <tr>
                     <td>{{ outbound.customer.name }}</td>
-                    <td>{{ outbound.customer_part_number }}</td>
-                    <td>{{ outbound.product_type }}</td>
-                    <td>{{ outbound.product_type.name }}</td>
+                    <td>{{ outbound.order_number }}</td>
+                    <td>{{ outbound.product_spec }}</td>
+                    <td>{{ outbound.batch_group_name }}</td>
                     <td>{{ outbound.quantity }}</td>
                     <td>{{ outbound.unit_price }}</td>
-                    <td>{{ outbound.shipping_date|date:"Y-m-d" }}</td>
+                    <td>{{ outbound.shipment_date|date:"Y-m-d" }}</td>
                     <td>
                         <a href="{% url 'inventory:outbound_detail' outbound.id %}" class="btn btn-sm btn-info">详情</a>
+                        <a href="{% url 'inventory:outbound_delete' outbound.id %}" 
+                           class="btn btn-sm btn-danger"
+                           onclick="return confirm('确定要删除这条出库记录吗？')">删除</a>
                     </td>
                 </tr>
                 {% empty %}

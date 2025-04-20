@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+import datetime  # 添加datetime模块导入
 
 class Supplier(models.Model):
     name = models.CharField('供应商名称', max_length=100)
@@ -89,7 +90,8 @@ class InventoryRecord(models.Model):
 
 class IncomingShipment(models.Model):
     document_number = models.CharField('单据编号', max_length=50)
-    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='供应商')
+    # Make supplier field nullable initially
+    supplier = models.CharField('供应商', max_length=100, null=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='客户')
     product_type = models.ForeignKey(ProductType, on_delete=models.CASCADE, verbose_name='产品型号')
     batch_number = models.CharField('批号', max_length=50)
@@ -146,6 +148,7 @@ class OutgoingShipment(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='客户')
     product_type = models.ForeignKey(ProductType, on_delete=models.CASCADE, verbose_name='产品型号')
     batch_number = models.CharField('批号', max_length=50)
+    product_spec = models.CharField(max_length=200, blank=True, null=True, verbose_name='品名规格')
     shipment_date = models.DateField('出货日期', default=timezone.now)
     order_number = models.CharField('选单号码', max_length=50, blank=True)  # 添加选单号码字段
     quantity = models.IntegerField('数量')
@@ -154,8 +157,14 @@ class OutgoingShipment(models.Model):
     pin_pitch = models.CharField('脚距', max_length=50, blank=True)
     unit_weight = models.DecimalField('单重(g)', max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField('备注', blank=True)
-    batch_group = models.ForeignKey(BatchGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='批次组')
-    # 保持原有字段
+    batch_group_name = models.CharField(
+        '批次组',
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True  # Add index for better performance
+    )
+    
     AUDIT_STATUS_CHOICES = [
         ('PENDING', '待审核'),
         ('APPROVED', '已审核'),
@@ -179,6 +188,35 @@ class OutgoingShipment(models.Model):
     class Meta:
         verbose_name = '出货单据'
         verbose_name_plural = '出货单据'
+
+    @classmethod
+    def get_monthly_bill_data(cls, customer_id, start_date: datetime.date, end_date: datetime.date):
+        """获取指定客户和日期范围的对账单数据
+        Args:
+            start_date (date): 查询开始日期
+            end_date (date): 查询结束日期
+        """
+        return cls.objects.filter(
+            customer_id=customer_id,
+            shipment_date__gte=start_date,
+            shipment_date__lte=end_date,
+            audit_status='APPROVED'
+        ).order_by('shipment_date')
+
+    def to_bill_dict(self):
+        return {
+            'date': self.shipment_date,  # 直接返回date对象
+            'document_number': self.document_number or '',
+            'model_number': self.product_type.model_number,
+            'batch_number': self.batch_number,
+            'product_spec': self.product_spec or self.product_type.model_number,
+            'quantity': self.quantity or 0,  # 添加数量字段
+            'unit_price': float(self.unit_price) if self.unit_price else 0.0,  # 转换Decimal类型
+            'total_amount': float(self.total_amount) if self.total_amount else 0.0,  # 添加总金额
+            'batch_group': self.batch_group_name or '',
+            'pin_pitch': self.pin_pitch or '',
+            'notes': self.notes or ''
+        }
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver

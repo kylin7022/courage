@@ -33,7 +33,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for inbound in inbounds %}
+                {% for inbound in inbound_shipments %}
                 <tr>
                     <td>{{ inbound.document_number }}</td>
                     <td>{{ inbound.customer.name }}</td>
@@ -42,6 +42,31 @@
                     <td>{{ inbound.shipment_date|date:"Y-m-d" }}</td>
                     <td>
                         <a href="{% url 'inventory:inbound_detail' inbound.id %}" class="btn btn-sm btn-info">详情</a>
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ inbound.id }}">删除</button>
+                        
+                        <!-- 删除确认模态框 -->
+                        <div class="modal fade" id="deleteModal{{ inbound.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ inbound.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteModalLabel{{ inbound.id }}">确认删除</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>确定要删除这条入库记录吗？</p>
+                                        <p>单据编号：{{ inbound.document_number }}</p>
+                                        <p>客户：{{ inbound.customer.name }}</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <form action="{% url 'inventory:inbound_delete' inbound.id %}" method="post">
+                                            {% csrf_token %}
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <button type="submit" class="btn btn-danger">确认删除</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -53,24 +78,24 @@
         </table>
     </div>
 
-    {% if inbounds.has_other_pages %}
+    {% if inbound_shipments.has_other_pages %}
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center">
-            {% if inbounds.has_previous %}
+            {% if inbound_shipments.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ inbounds.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo;</a>
+                <a class="page-link" href="?page={{ inbound_shipments.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo;</a>
             </li>
             {% endif %}
 
-            {% for i in inbounds.paginator.page_range %}
-            <li class="page-item {% if inbounds.number == i %}active{% endif %}">
+            {% for i in inbound_shipments.paginator.page_range %}
+            <li class="page-item {% if inbound_shipments.number == i %}active{% endif %}">
                 <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ i }}</a>
             </li>
             {% endfor %}
 
-            {% if inbounds.has_next %}
+            {% if inbound_shipments.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ inbounds.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&raquo;</a>
+                <a class="page-link" href="?page={{ inbound_shipments.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">&raquo;</a>
             </li>
             {% endif %}
         </ul>

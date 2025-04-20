@@ -67,12 +67,17 @@ class ProductTypeForm(forms.ModelForm):
         }
 
 class IncomingShipmentForm(forms.ModelForm):
+    # Add supplier as a CharField for manual input
+    supplier = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = IncomingShipment
         fields = ['document_number', 'supplier', 'customer', 'product_type', 'batch_number', 'quantity', 'shipment_date', 'notes']
         widgets = {
             'document_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'supplier': forms.Select(attrs={'class': 'form-control'}),
             'customer': forms.Select(attrs={'class': 'form-control'}),
             'product_type': forms.Select(attrs={'class': 'form-control'}),
             'batch_number': forms.TextInput(attrs={'class': 'form-control'}),
@@ -88,29 +93,23 @@ class IncomingShipmentForm(forms.ModelForm):
         return quantity
 
 class OutgoingShipmentForm(forms.ModelForm):
-    # 在类的开头添加选单号码字段
-    order_number = forms.CharField(
-        label='选单号码',
-        max_length=50,
+    batch_group_name = forms.CharField(
+        label='批次组',
+        max_length=100,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'off'  # Add this to prevent browser autocomplete
+        })
     )
-
+    
     class Meta:
         model = OutgoingShipment
         fields = [
-            'document_number', 
-            'customer', 
-            'product_type', 
-            'batch_number',
-            'shipment_date',
-            'order_number',   # 保留这个字段
-            'quantity', 
-            'unit_price',
-            'pin_pitch',
-            'unit_weight',
-            'batch_group',
-            'notes'
+            'document_number', 'customer', 'product_type', 'batch_number',
+            'product_spec', 'shipment_date', 'order_number', 'quantity',
+            'unit_price', 'total_amount',  # 新增总金额字段
+            'pin_pitch', 'unit_weight', 'notes', 'batch_group_name'
         ]
         widgets = {
             'document_number': forms.TextInput(attrs={'class': 'form-control'}),
@@ -123,18 +122,12 @@ class OutgoingShipmentForm(forms.ModelForm):
             }),
             'order_number': forms.TextInput(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'pin_pitch': forms.TextInput(attrs={'class': 'form-control'}),
-            'unit_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'batch_group': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
-        }  # 添加这个闭合的大括号
-
-    def clean_quantity(self):
-        quantity = self.cleaned_data.get('quantity')
-        if quantity <= 0:
-            raise ValidationError('数量必须大于0')
-        return quantity
+            'unit_price': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'readonly': True,  # 设置为只读
+                'tabindex': '-1'   # 禁止聚焦
+            }),
+        }
 
     def clean(self):
         cleaned_data = super().clean()
@@ -157,6 +150,11 @@ class OutgoingShipmentForm(forms.ModelForm):
                     'batch_number': f'找不到批号为 {batch_number} 的库存记录'
                 })
 
+        # 新增金额验证
+        unit_price = cleaned_data.get('unit_price')
+        if unit_price and unit_price < 0:
+            self.add_error('unit_price', '单价不能为负数')
+            
         return cleaned_data
 
 class BatchGroupForm(forms.ModelForm):

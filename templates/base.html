@@ -97,8 +97,12 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="yearMonth" class="form-label">选择年月</label>
-                            <input type="month" class="form-control" id="yearMonth" name="yearMonth" required>
+                            <label for="startDate" class="form-label">起始日期</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label">结束日期</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" required>
                         </div>
                     </form>
                 </div>
@@ -140,12 +144,13 @@
 
     function exportMonthlyBill() {
         const customerId = document.getElementById('monthlyCustomerSelect').value;
-        const yearMonthInput = document.getElementById('yearMonth').value;
-        if (customerId && yearMonthInput) {
-            const [year, month] = yearMonthInput.split('-');
-            window.location.href = `/inventory/customers/${customerId}/export-monthly-bill/${year}/${month}/`;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (customerId && startDate && endDate) {
+            window.location.href = `/inventory/customers/${customerId}/export-monthly-bill/?start_date=${startDate}&end_date=${endDate}`;
         } else {
-            alert('请选择客户和年月');
+            alert('请填写所有必填项');
         }
     }
     </script>
