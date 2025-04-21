@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-wnwatv^g_i(yyfa*5hk3ylg4#4_1_ke*x)1%*05e_ukum@qtop
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['kylin.pythonanywhere.com', '127.0.0.1']
 
 
 # Application definition

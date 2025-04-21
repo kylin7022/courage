@@ -372,16 +372,28 @@ def export_monthly_bill(request, customer_id):
             'bold': True,
             'align': 'center',
             'valign': 'vcenter',
-            'font_size': 12
+            'font_size': 14,
+            'border': 1
+        })
+        header_format = workbook.add_format({
+            'bold': True,
+            'align': 'center',
+            'border': 1
         })
         
-        # 写入表头
+        # 添加标题行（动态填充客户和日期）
+        worksheet.merge_range(1, 0, 1, 1, f'客户：{customer.name}', header_format)  # A2-B2合并带客户名称
+        worksheet.merge_range(1, 2, 1, 4, f'起止日期：{start_date} - {end_date}', header_format)  # C2-E2合并带日期
+        worksheet.merge_range(1, 5, 1, 6, '月结方式：', header_format)  # F2-G2合并
+        worksheet.write(1, 7, '币别：', header_format)  # H2
+
+        # 写入表头（从第2行开始保持不变）
         headers = ['日期', '送单号码', '批号', '品名规格', '数量(K)', '脚距(mm)', '单价', '金额']
         for col, header in enumerate(headers):
-            worksheet.write(0, col, header, title_format)
-        
-        # 写入数据（添加空值保护）
-        for row, record in enumerate(records, start=1):
+            worksheet.write(2, col, header, header_format)  # 第三行
+
+        # 调整数据写入起始行（原1改为3）
+        for row, record in enumerate(records, start=3):  # 数据从第4行开始
             # 添加字段调试信息
             print(f"记录 {row} 批号: {record.batch_number} 数量: {record.quantity}")
             
@@ -436,18 +448,28 @@ def export_delivery_note(request, customer_id):
         'bold': True,
         'align': 'center',
         'valign': 'vcenter',
-        'font_size': 12,
+        'font_size': 14,
+        'border': 1
+    })
+    header_format = workbook.add_format({
+        'bold': True,
+        'align': 'center',
         'border': 1
     })
     
-    # 写入表头
-    headers = ['批号', '品名规格', '数量', '单重', '备注']
-    worksheet.set_column(0, 4, 15)
-    for col, header in enumerate(headers):
-        worksheet.write(0, col, header, title_format)
+    # 添加标题行
+    worksheet.merge_range(0, 1, 0, 2, '出货明细', title_format)  # B1-C1合并
+    worksheet.write(0, 3, '送货单号：')  # D1
+    worksheet.write(1, 0, f'客户名称：{customer.name}')  # A2
+    worksheet.write(1, 3, f'出货日期：{datetime.now().strftime("%Y-%m-%d")}')  # D2
     
-    # 写入数据（修正缩进并添加字段验证）
-    for row, record in enumerate(records, start=1):
+    # 写入表头（从第2行开始）
+    headers = ['批号', '品名规格', '数量', '单重', '备注']
+    for col, header in enumerate(headers):
+        worksheet.write(2, col, header, header_format)  # 第三行
+    
+    # 调整数据写入起始行（原1改为3）
+    for row, record in enumerate(records, start=3):  # 数据从第4行开始
         # 字段验证调试
         print(f"记录 {row} 字段验证:")
         print(f"unit_weight 存在: {hasattr(record, 'unit_weight')}")
@@ -462,6 +484,11 @@ def export_delivery_note(request, customer_id):
         worksheet.write_number(row, 2, float(record.quantity) if record.quantity else 0.0)
         worksheet.write_number(row, 3, float(record.unit_price) if record.unit_price else 0.0)
         worksheet.write(row, 4, record.notes or '')
+    
+    # 添加底部签名（在所有数据行之后）
+    last_row = 3 + len(records)  # 计算最后一行号
+    worksheet.write(last_row + 1, 0, '制单')   # 批号列底部
+    worksheet.write(last_row + 1, 3, '签收')   # 单重列底部
     
     workbook.close()
     
