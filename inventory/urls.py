@@ -4,11 +4,17 @@ from . import views
 app_name = 'inventory'
 
 urlpatterns = [
-    # 客户管理
+    # 客户管理相关路由
     path('customers/', views.customer_list, name='customer_list'),
-    path('customers/add/', views.customer_add, name='customer_add'),
-    path('customers/<int:customer_id>/edit/', views.customer_edit, name='customer_edit'),
-    path('customers/<int:customer_id>/delete/', views.customer_delete, name='customer_delete'),
+    path('customers/create/', views.customer_create, name='customer_create'),
+    path('customers/<int:pk>/edit/', views.customer_edit, name='customer_edit'),
+    path('customers/<int:pk>/delete/', views.customer_delete, name='customer_delete'),
+    
+    # 导出功能相关路由
+    path('export/', views.export_management, name='export_management'),  # 新增导出管理页面路由
+    path('get-customers-for-export/', views.get_customers_for_export, name='get_customers_for_export'),
+    path('customers/<int:customer_id>/export-monthly-bill/', views.export_monthly_bill, name='export_monthly_bill'),
+    path('export-bill/<int:customer_id>/', views.export_delivery_note, name='export_delivery_note'),
     
     # 入库单据管理
     path('inbound/', views.inbound_list, name='inbound_list'),
@@ -35,17 +41,6 @@ urlpatterns = [
     path('price/add/', views.price_add, name='price_add'),
     path('price/<int:price_id>/edit/', views.price_edit, name='price_edit'),
     path('price/<int:price_id>/delete/', views.price_delete, name='price_delete'),
-    
-    # 导出账单
-    path('export-bill/<int:customer_id>/', views.export_customer_bill, name='export_customer_bill'),
-    
-    # 批次组管理
-    path('batch-groups/', views.batch_group_list, name='batch_group_list'),
-    path('batch-groups/add/', views.batch_group_create, name='batch_group_create'),
-    path('batch-groups/<int:pk>/update/', views.batch_group_update, name='batch_group_update'),
-    path('batch-groups/<int:pk>/delete/', views.batch_group_delete, name='batch_group_delete'),
-    path('customers/<int:customer_id>/export-monthly-bill/', views.export_monthly_bill, name='export_monthly_bill'),
-         
-    # API接口
+
     path('api/product-types/<int:product_type_id>/', views.product_type_detail_api, name='product_type_detail_api'),
 ]

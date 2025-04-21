@@ -29,17 +29,15 @@
                         <a class="nav-link" href="{% url 'inventory:outbound_list' %}"><i class="fas fa-sign-out-alt"></i> 出库管理</a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="exportDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" id="exportDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-file-export"></i> 导出管理
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                            <li><a class="dropdown-item" href="{% url 'inventory:batch_group_list' %}"><i class="fas fa-layer-group"></i> 批次管理</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#exportBillModal">
-                                <i class="fas fa-file-invoice"></i> 导出出货单
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#accountStatementModal">
+                                <i class="fas fa-file-invoice"></i> 对账单导出
                             </a></li>
-                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#exportMonthlyBillModal">
-                                <i class="fas fa-file-invoice-dollar"></i> 导出对账单
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deliveryNoteModal">
+                                <i class="fas fa-truck"></i> 出货单导出
                             </a></li>
                         </ul>
                     </li>
@@ -48,67 +46,57 @@
         </div>
     </nav>
 
-    <!-- 导出出货单模态框 -->
-    <div class="modal fade" id="exportBillModal" tabindex="-1" aria-labelledby="exportBillModalLabel" aria-hidden="true">
+    <!-- 对账单导出模态框 -->
+    <div class="modal fade" id="accountStatementModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exportBillModalLabel">导出出货单</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">导出对账单</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="exportBillForm" action="" method="get">
-                        <div class="mb-3">
-                            <label for="customerSelect" class="form-label">选择客户</label>
-                            <select class="form-select" id="customerSelect" name="customer_id" required>
-                                <option value="">请选择客户...</option>
-                                {% for customer in customers %}
-                                <option value="{{ customer.id }}">{{ customer.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </form>
+                    <div class="mb-3">
+                        <label class="form-label">选择客户</label>
+                        <select class="form-select" id="monthlyCustomerSelect">
+                            <!-- 在视图中动态填充客户列表 -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">结束日期</label>
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="exportBill()">导出</button>
+                    <button type="button" class="btn btn-primary" onclick="exportMonthlyBill()">导出</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 导出对账单模态框 -->
-    <div class="modal fade" id="exportMonthlyBillModal" tabindex="-1" aria-labelledby="exportMonthlyBillModalLabel" aria-hidden="true">
+    <!-- 出货单导出模态框 -->
+    <div class="modal fade" id="deliveryNoteModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exportMonthlyBillModalLabel">导出对账单</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">导出出货单</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="exportMonthlyBillForm" action="" method="get">
-                        <div class="mb-3">
-                            <label for="monthlyCustomerSelect" class="form-label">选择客户</label>
-                            <select class="form-select" id="monthlyCustomerSelect" name="customer_id" required>
-                                <option value="">请选择客户...</option>
-                                {% for customer in customers %}
-                                <option value="{{ customer.id }}">{{ customer.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="startDate" class="form-label">起始日期</label>
-                            <input type="date" class="form-control" id="startDate" name="startDate" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="endDate" class="form-label">结束日期</label>
-                            <input type="date" class="form-control" id="endDate" name="endDate" required>
-                        </div>
-                    </form>
+                    <div class="mb-3">
+                        <label class="form-label">选择客户</label>
+                        <select class="form-select" id="customerSelect">
+                            <!-- 在视图中动态填充客户列表 -->
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="exportMonthlyBill()">导出</button>
+                    <button type="button" class="btn btn-primary" onclick="exportBill()">导出</button>
                 </div>
             </div>
         </div>
@@ -133,6 +121,21 @@
     <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 加载客户列表
+        fetch('/inventory/get-customers-for-export/')
+            .then(response => response.json())
+            .then(data => {
+                const monthlyCustomerSelect = document.getElementById('monthlyCustomerSelect');
+                const customerSelect = document.getElementById('customerSelect');
+                
+                data.customers.forEach(customer => {
+                    const option = new Option(customer.name, customer.id);
+                    monthlyCustomerSelect.add(option.cloneNode(true));
+                    customerSelect.add(option);
+                });
+            });
+    });
     function exportBill() {
         const customerId = document.getElementById('customerSelect').value;
         if (customerId) {

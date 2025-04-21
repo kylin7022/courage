@@ -1,89 +1,69 @@
+from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
-from django.db.models import Sum, F
 from django.contrib import messages
-import csv
-import datetime
-from decimal import Decimal
-from django.urls import reverse
-from django.http import HttpResponse
-import xlsxwriter
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.http import JsonResponse, HttpResponse
 from io import BytesIO
 from datetime import datetime
-
 from .models import (
     Customer, 
-    ProductType, 
-    Price, 
-    OutgoingShipment, 
-    IncomingShipment, 
-    BatchGroup, 
-    Inventory
+    ProductType,
+    IncomingShipment,
+    OutgoingShipment,
+    Inventory,
+    Price
 )
 from .forms import (
-    CustomerForm, 
-    ProductTypeForm, 
-    PriceForm, 
-    OutgoingShipmentForm, 
-    IncomingShipmentForm, 
-    BatchGroupForm
+    CustomerForm,
+    ProductTypeForm,
+    IncomingShipmentForm,
+    OutgoingShipmentForm,
+    PriceForm
 )
-from django.core.paginator import Paginator
-import xlwt  # 添加到文件顶部的导入语句中
+import xlsxwriter
 
-def home(request):
-    """
-    首页视图函数
-    """
-    return render(request, 'home.html')
-
-# 客户管理
 @login_required
 def customer_list(request):
     customers = Customer.objects.all().order_by('-created_at')
     return render(request, 'inventory/customer_list.html', {'customers': customers})
 
 @login_required
-def customer_add(request):
+def customer_create(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
-        print("POST data:", request.POST)  # 添加调试信息
         if form.is_valid():
-            try:
-                print("Form is valid, cleaned data:", form.cleaned_data)  # 添加调试信息
-                customer = form.save()
-                messages.success(request, '客户添加成功！')
-                return redirect('inventory:customer_list')
-            except Exception as e:
-                print(f"Error saving customer: {str(e)}")  # 添加调试信息
-                messages.error(request, f'保存失败：{str(e)}')
-        else:
-            print("Form errors:", form.errors)  # 添加调试信息
+            form.save()
+            messages.success(request, '客户创建成功！')
+            return redirect('inventory:customer_list')
     else:
         form = CustomerForm()
+    
     return render(request, 'inventory/customer_form.html', {
-        'form': form, 
-        'title': '添加客户',
-        'submit_url': reverse('inventory:customer_add')
+        'form': form,
+        'title': '添加客户'
     })
 
 @login_required
-def customer_edit(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
+def customer_edit(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
     if request.method == 'POST':
         form = CustomerForm(request.POST, instance=customer)
         if form.is_valid():
             form.save()
-            messages.success(request, '客户更新成功！')
+            messages.success(request, '客户信息更新成功！')
             return redirect('inventory:customer_list')
     else:
         form = CustomerForm(instance=customer)
-    return render(request, 'inventory/customer_form.html', {'form': form, 'title': '编辑客户'})
+    
+    return render(request, 'inventory/customer_form.html', {
+        'form': form,
+        'title': '编辑客户'
+    })
 
 @login_required
-def customer_delete(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
+def customer_delete(request, pk):  # Changed parameter name to match URL pattern
+    customer = get_object_or_404(Customer, pk=pk)
     if request.method == 'POST':
         customer.delete()
         messages.success(request, '客户删除成功！')
@@ -186,26 +166,14 @@ def outbound_list(request):
 @login_required
 def outbound_add(request):
     if request.method == 'POST':
-        print("收到的POST数据:", request.POST)  # 调试信息
         form = OutgoingShipmentForm(request.POST)
         if form.is_valid():
-            print("表单验证通过，清理后的数据:", form.cleaned_data)  # 调试信息
             outbound = form.save(commit=False)
-            
-            # 如果品名规格未填写，但已选择产品型号，则自动填写
-            if not outbound.product_spec and outbound.product_type:
-                product_type = outbound.product_type
-                outbound.product_spec = f"{product_type.name} - {product_type.description}"
-            
-            # 确保批次组名称被正确保存
-            batch_group_name = form.cleaned_data.get('batch_group_name')
-            print("批次组名称:", batch_group_name)  # 调试信息
-            outbound.batch_group_name = batch_group_name
-            
-            print("保存前的出库单对象:", vars(outbound))  # 调试信息
+            # 自动计算总金额
+            outbound.total_amount = outbound.quantity * outbound.unit_price
+            # 设置默认审核状态
+            outbound.audit_status = 'PENDING'  
             outbound.save()
-            print("保存后的出库单对象:", vars(outbound))  # 调试信息
-            
             messages.success(request, '出库单据添加成功！')
             return redirect('inventory:outbound_list')
         else:
@@ -288,10 +256,11 @@ def product_type_edit(request, product_type_id):
 def product_type_delete(request, product_type_id):
     product_type = get_object_or_404(ProductType, id=product_type_id)
     if request.method == 'POST':
-        product_type.delete()
-        messages.success(request, '产品型号删除成功！')
+        product_type.soft_delete()  # 使用软删除方法
+        messages.success(request, '产品型号已删除')
         return redirect('inventory:product_type_list')
-    return render(request, 'inventory/confirm_delete.html', {'object': product_type, 'title': '删除产品型号'})
+    return render(request, 'inventory/confirm_delete.html', 
+                 {'object': product_type, 'title': '删除产品型号'})
 
 # 价格设置
 @login_required
@@ -333,231 +302,6 @@ def price_delete(request, price_id):
         return redirect('inventory:price_list')
     return render(request, 'inventory/confirm_delete.html', {'object': price, 'title': '删除价格记录'})
 
-# 导出账单
-@login_required
-def export_customer_bill(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
-    
-    # 添加调试信息，检查所有出货记录
-    all_shipments = OutgoingShipment.objects.all()
-    print(f"数据库中所有出货记录数量: {all_shipments.count()}")
-    for shipment in all_shipments:
-        print(f"出货记录: ID={shipment.id}, 客户ID={shipment.customer_id}, 客户名={shipment.customer.name}")
-    
-    # 获取该客户的所有出货记录
-    # 修改查询条件，添加审核状态过滤
-    outgoing_shipments = OutgoingShipment.objects.filter(
-        customer=customer,
-        audit_status='APPROVED'  # 只导出已审核的记录
-    ).order_by('-created_at')
-    
-    print(f"客户 {customer.name} 的出货记录数量: {outgoing_shipments.count()}")
-    
-    # 添加更详细的调试信息
-    print(f"SQL查询: {outgoing_shipments.query}")
-    print(f"记录数量: {outgoing_shipments.count()}")
-    
-    # 检查每条记录
-    for shipment in outgoing_shipments:
-        print(f"出货记录: ID={shipment.id}, 日期={shipment.shipment_date}, 客户={shipment.customer.name}")
-    
-    # 创建新的Excel工作簿和工作表
-    wb = xlwt.Workbook(encoding='utf-8')
-    ws = wb.add_sheet('出货记录')
-    
-    # 设置标题样式
-    title_style = xlwt.easyxf('font: bold on')
-    
-    # 写入表头
-    headers = ['出货日期', '型号', '品名规格', '批号', '批次组', '针距', '数量', '单价', '总金额', '备注']
-    for col, header in enumerate(headers):
-        ws.write(0, col, header, title_style)
-    
-    # 写入数据行（添加空值保护）
-    for row, shipment in enumerate(outgoing_shipments, start=1):
-        try:
-            # 获取关联数据时添加空值判断
-            product_type = getattr(shipment, 'product_type', None)
-            model_number = product_type.model_number if product_type else ''
-            
-            ws.write(row, 0, shipment.shipment_date.strftime('%Y-%m-%d') if shipment.shipment_date else '')
-            ws.write(row, 1, model_number)  # 型号
-            ws.write(row, 2, shipment.product_spec or '')
-            ws.write(row, 3, shipment.batch_number or '')
-            ws.write(row, 4, shipment.batch_group_name or '')  # 直接使用字符型字段
-            ws.write(row, 5, shipment.pin_pitch or '')
-            ws.write(row, 6, shipment.quantity or 0)
-            ws.write(row, 7, float(shipment.unit_price) if shipment.unit_price else 0.00)
-            ws.write(row, 8, float(shipment.total_amount) if shipment.total_amount else 0.00)
-            ws.write(row, 9, shipment.notes or '')
-        except Exception as e:
-            print(f"写入行 {row} 时出错: {str(e)}")
-            raise  # 添加异常抛出以便调试
-
-    # 设置列宽
-    for col in range(len(headers)):
-        ws.col(col).width = 256 * 15  # 15个字符宽度
-    
-    # 创建响应
-    response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = f'attachment; filename="{customer.name}_出货记录.xls"'
-    
-    # 保存Excel文件
-    wb.save(response)
-    return response
-
-def export_monthly_bill(request, customer_id):
-    # 添加异常处理确保日期参数有效
-    try:
-        start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
-        end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
-    except (TypeError, ValueError) as e:
-        return HttpResponse(f"日期格式错误: {str(e)}", status=400)
-    
-    # 添加更详细的调试日志
-    print(f"转换后的日期参数 - 开始: {start_date}(类型: {type(start_date)}), 结束: {end_date}(类型: {type(end_date)})")
-    
-    # 获取数据时添加select_related提升性能
-    shipments = OutgoingShipment.get_monthly_bill_data(customer_id, start_date, end_date)\
-        .select_related('customer', 'product_type')
-    
-    # 添加调试信息
-    print(f"有效出货单数量: {shipments.count()}")
-    for shipment in shipments[:3]:  # 打印前3条记录
-        print(f"出货单ID: {shipment.id}, 审核状态: {shipment.audit_status}, 日期: {shipment.shipment_date}")
-    
-    # 获取数据
-    shipments = OutgoingShipment.get_monthly_bill_data(customer_id, start_date, end_date)
-    customer = Customer.objects.get(id=customer_id)
-    
-    # 创建Excel文件
-    output = BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet()
-    
-    # 设置样式
-    title_format = workbook.add_format({
-        'bold': True,
-        'align': 'center',
-        'valign': 'vcenter',
-        'font_size': 12
-    })
-    header_format = workbook.add_format({
-        'bold': True,
-        'align': 'center',
-        'border': 1
-    })
-    cell_format = workbook.add_format({
-        'align': 'center',
-        'border': 1
-    })
-    
-    # 写入标题（修复日期格式）
-    worksheet.merge_range('A1:H1', 
-                         f'{end_date.year}年{end_date.month:02d}月份对账单',  # 使用datetime属性
-                         title_format)
-    worksheet.write('A2', f'客户：{customer.name}', workbook.add_format({'bold': True}))
-    worksheet.write('E2', 
-                   f'起止日期：{start_date.strftime("%Y-%m-%d")}~{end_date.strftime("%Y-%m-%d")}',  # 使用strftime格式化
-                   workbook.add_format({'bold': True}))
-    
-    # 写入表头
-    headers = ['日期', '送单号码', '批号', '品名规格', '数量(k)', '脚距(mm)', '单价', '金额']
-    for col, header in enumerate(headers):
-        worksheet.write(3, col, header, header_format)
-    
-    # 写入数据
-    row = 4
-    total_amount = 0
-    for shipment in shipments:
-        data = shipment.to_bill_dict()  # 添加缩进
-        worksheet.write(row, 0, data['date'].strftime('%Y-%m-%d'), cell_format)
-        worksheet.write(row, 1, data['document_number'], cell_format)
-        worksheet.write(row, 2, data['batch_number'], cell_format)
-        worksheet.write(row, 3, data['product_spec'], cell_format)
-        worksheet.write(row, 4, data['quantity'], cell_format)
-        worksheet.write(row, 5, data['pin_pitch'], cell_format)
-        worksheet.write(row, 6, float(data['unit_price']), cell_format)
-        worksheet.write(row, 7, float(data['total_amount']), cell_format)
-        total_amount += float(data['total_amount'])
-        row += 1
-    
-    # 写入合计
-    worksheet.write(row, 6, '合计：', header_format)
-    worksheet.write(row, 7, total_amount, header_format)
-    
-    # 设置列宽
-    worksheet.set_column('A:A', 12)  # 日期
-    worksheet.set_column('B:B', 15)  # 送单号码
-    worksheet.set_column('C:C', 12)  # 批号
-    worksheet.set_column('D:D', 20)  # 品名规格
-    worksheet.set_column('E:H', 10)  # 其他列
-    
-    workbook.close()
-    
-    # 准备响应
-    output.seek(0)
-    # 修复文件名中的日期格式
-    filename = f"{customer.name}_{end_date.year}年{end_date.month:02d}月对账单.xlsx"
-    response = HttpResponse(
-        output.read(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
-    return response
-
-# 批次组管理
-@login_required
-def batch_group_list(request):
-    batch_group_list = BatchGroup.objects.all().order_by('-created_at')
-    paginator = Paginator(batch_group_list, 10)  # 每页显示10条记录
-    
-    page = request.GET.get('page')
-    batch_groups = paginator.get_page(page)
-    
-    return render(request, 'inventory/batch_group_list.html', {
-        'batch_groups': batch_groups,
-        'page_obj': batch_groups,  # 添加这行
-        'title': '批次管理'
-    })
-
-def batch_group_create(request):
-    if request.method == 'POST':
-        form = BatchGroupForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '批次创建成功')
-            return redirect('inventory:batch_group_list')
-    else:
-        form = BatchGroupForm()
-    
-    return render(request, 'inventory/batch_group_form.html', {
-        'form': form,
-        'title': '新增批次'
-    })
-
-def batch_group_update(request, pk):
-    batch_group = get_object_or_404(BatchGroup, pk=pk)
-    if request.method == 'POST':
-        form = BatchGroupForm(request.POST, instance=batch_group)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '批次更新成功')
-            return redirect('inventory:batch_group_list')
-    else:
-        form = BatchGroupForm(instance=batch_group)
-    
-    return render(request, 'inventory/batch_group_form.html', {
-        'form': form,
-        'title': '编辑批次'
-    })
-
-def batch_group_delete(request, pk):
-    batch_group = get_object_or_404(BatchGroup, pk=pk)
-    batch_group.delete()
-    messages.success(request, '批次删除成功')
-    return redirect('inventory:batch_group_list')
 
 # API视图
 @login_required
@@ -576,3 +320,176 @@ def product_type_detail_api(request, product_type_id):
         'customer_name': product_type.customer.name
     }
     return JsonResponse(data)
+
+
+def get_customers_for_export(request):
+    """获取客户列表用于导出功能"""
+    customers = Customer.objects.all().order_by('name')
+    return JsonResponse({
+        'customers': list(customers.values('id', 'name'))
+    })
+
+
+@login_required
+def export_monthly_bill(request, customer_id):
+    """导出客户对账单"""
+    customer = get_object_or_404(Customer, id=customer_id)
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    try:
+        # 添加更严格的日期校验
+        if not all([start_date, end_date]):
+            return HttpResponse("必须同时提供开始日期和结束日期", status=400)
+            
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        # 添加调试日志
+        print(f"导出条件检查 - 客户: {customer.name}")
+        print(f"日期范围: {start_date} 至 {end_date}")
+        
+        # 修正查询条件（使用实际数据库中的状态值）
+        records = OutgoingShipment.objects.filter(
+            customer=customer,
+            shipment_date__range=[start_date, end_date],
+            audit_status='PENDING'  # 改为实际存在的状态值
+        ).order_by('shipment_date')
+        
+        print(f"实际查询条件: customer={customer.id} status=PENDING date_range={start_date}-{end_date}")
+        print(f"找到 {records.count()} 条记录")
+        
+        if not records.exists():
+            return HttpResponse("没有找到符合条件的出库记录", status=404)
+
+        # 创建Excel文件（添加字段存在性校验）
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet()
+        
+        # 设置标题格式
+        title_format = workbook.add_format({
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            'font_size': 12
+        })
+        
+        # 写入表头
+        headers = ['日期', '送单号码', '批号', '品名规格', '数量(K)', '脚距(mm)', '单价', '金额']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, title_format)
+        
+        # 写入数据（添加空值保护）
+        for row, record in enumerate(records, start=1):
+            # 添加字段调试信息
+            print(f"记录 {row} 批号: {record.batch_number} 数量: {record.quantity}")
+            
+            worksheet.write(row, 0, record.shipment_date.strftime('%Y-%m-%d') if record.shipment_date else '')
+            worksheet.write(row, 1, record.order_number or '未录入')
+            worksheet.write(row, 2, record.batch_number or 'N/A')
+            worksheet.write(row, 3, record.product_spec or (record.product_type.name if record.product_type else '未知型号'))
+            worksheet.write_number(row, 4, float(record.quantity) if record.quantity and record.quantity > 0 else 0.0)
+            worksheet.write(row, 5, str(record.pin_pitch) if record.pin_pitch else '')
+            worksheet.write_number(row, 6, float(record.unit_price) if record.unit_price else 0.0)
+            worksheet.write_number(row, 7, float(record.total_amount) if record.total_amount else 0.0)
+        
+        workbook.close()
+        
+        # 设置响应头
+        output.seek(0)
+        filename = f"{customer.name}_对账单_{start_date}至{end_date}.xlsx"
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"导出失败: {str(e)}", status=500)
+
+
+@login_required
+def export_delivery_note(request, customer_id):
+    """导出客户出货单"""
+    customer = get_object_or_404(Customer, id=customer_id)
+    
+    # 修改查询条件（添加更多状态支持）
+    records = OutgoingShipment.objects.filter(
+        customer=customer,
+        audit_status__in=['APPROVED', 'PENDING'],
+        quantity__gt=0
+    ).order_by('-shipment_date').select_related('product_type')[:50]
+    
+    print(f"导出记录数: {records.count()}")
+    if records:
+        print(f"示例记录批号: {records[0].batch_number}")
+
+    # 创建Excel文件
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet()
+    
+    # 设置标题格式
+    title_format = workbook.add_format({
+        'bold': True,
+        'align': 'center',
+        'valign': 'vcenter',
+        'font_size': 12,
+        'border': 1
+    })
+    
+    # 写入表头
+    headers = ['批号', '品名规格', '数量', '单重', '备注']
+    worksheet.set_column(0, 4, 15)
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, title_format)
+    
+    # 写入数据（修正缩进并添加字段验证）
+    for row, record in enumerate(records, start=1):
+        # 字段验证调试
+        print(f"记录 {row} 字段验证:")
+        print(f"unit_weight 存在: {hasattr(record, 'unit_weight')}")
+        print(f"unit_price 存在: {hasattr(record, 'unit_price')}")
+        
+        # 处理品名规格
+        product_spec = record.product_spec or f"{record.product_type.name} {record.product_type.description or ''}".strip()
+        
+        # 写入数据（添加空值处理）
+        worksheet.write(row, 0, record.batch_number or 'N/A')
+        worksheet.write(row, 1, product_spec or '未指定规格')
+        worksheet.write_number(row, 2, float(record.quantity) if record.quantity else 0.0)
+        worksheet.write_number(row, 3, float(record.unit_price) if record.unit_price else 0.0)
+        worksheet.write(row, 4, record.notes or '')
+    
+    workbook.close()
+    
+    # 处理空数据情况
+    if records.count() == 0:
+        return HttpResponse("当前没有可导出的出货记录", status=404)
+    
+    output.seek(0)
+    filename = f"{customer.name}_出货单_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def export_management(request):
+    """导出管理页面视图"""
+    return render(request, 'inventory/export_management.html', {
+        'title': '导出管理'
+    })
+
+
+# Add this at the beginning of the file, with other imports
+def home(request):
+    """
+    首页视图函数
+    """
+    return render(request, 'home.html')

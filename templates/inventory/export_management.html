@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>导出管理</h2>
+    <div class="row">
+        <!-- 对账单导出 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">对账单导出</h5>
+                </div>
+                <div class="card-body">
+                    <form id="monthlyBillForm">
+                        <div class="mb-3">
+                            <label for="customerSelect" class="form-label">选择客户</label>
+                            <select class="form-select" id="customerSelect" required>
+                                <option value="">请选择客户</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label">开始日期</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label">结束日期</label>
+                            <input type="date" class="form-control" id="endDate" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="exportMonthlyBill()">
+                            导出对账单
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 出货单导出 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">出货单导出</h5>
+                </div>
+                <div class="card-body">
+                    <form id="deliveryNoteForm">
+                        <div class="mb-3">
+                            <label for="customerSelect2" class="form-label">选择客户</label>
+                            <select class="form-select" id="customerSelect2" required>
+                                <option value="">请选择客户</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="exportDeliveryNote()">
+                            导出出货单
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载时获取客户列表
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{% url "inventory:get_customers_for_export" %}')
+        .then(response => response.json())
+        .then(data => {
+            const customers = data.customers;
+            const select1 = document.getElementById('customerSelect');
+            const select2 = document.getElementById('customerSelect2');
+            
+            customers.forEach(customer => {
+                const option = new Option(customer.name, customer.id);
+                select1.add(option.cloneNode(true));
+                select2.add(option);
+            });
+        })
+        .catch(error => console.error('获取客户列表失败:', error));
+});
+
+// 导出对账单
+function exportMonthlyBill() {
+    const customerId = document.getElementById('customerSelect').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!customerId || !startDate || !endDate) {
+        alert('请填写所有必填项');
+        return;
+    }
+
+    window.location.href = `{% url "inventory:export_monthly_bill" 0 %}`.replace('0', customerId) 
+        + `?start_date=${startDate}&end_date=${endDate}`;
+}
+
+// 导出出货单
+function exportDeliveryNote() {
+    const customerId = document.getElementById('customerSelect2').value;
+    
+    if (!customerId) {
+        alert('请选择客户');
+        return;
+    }
+
+    window.location.href = `{% url "inventory:export_delivery_note" 0 %}`.replace('0', customerId);
+}
+</script>
+{% endblock %}

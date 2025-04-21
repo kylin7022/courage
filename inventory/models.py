@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 import datetime  # 添加datetime模块导入
 
 class Supplier(models.Model):
@@ -43,9 +45,16 @@ class ProductType(models.Model):
     description = models.TextField('描述', blank=True)
     unit_price = models.DecimalField('单价', max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    is_deleted = models.BooleanField('是否删除', default=False)
+    deleted_at = models.DateTimeField('删除时间', null=True, blank=True)
 
     def __str__(self):
         return f'{self.customer.name} - {self.model_number}'
+
+    def soft_delete(self):
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save()
 
     class Meta:
         verbose_name = '产品型号'
@@ -175,51 +184,12 @@ class OutgoingShipment(models.Model):
     audit_time = models.DateTimeField('审核时间', null=True, blank=True)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        # 自动计算总金额
-        if self.unit_price and self.quantity:
-            self.total_amount = self.quantity * self.unit_price
-                
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return f'{self.customer.name} - {self.product_type}'
 
     class Meta:
         verbose_name = '出货单据'
         verbose_name_plural = '出货单据'
-
-    @classmethod
-    def get_monthly_bill_data(cls, customer_id, start_date: datetime.date, end_date: datetime.date):
-        """获取指定客户和日期范围的对账单数据
-        Args:
-            start_date (date): 查询开始日期
-            end_date (date): 查询结束日期
-        """
-        return cls.objects.filter(
-            customer_id=customer_id,
-            shipment_date__gte=start_date,
-            shipment_date__lte=end_date,
-            audit_status='APPROVED'
-        ).order_by('shipment_date')
-
-    def to_bill_dict(self):
-        return {
-            'date': self.shipment_date,  # 直接返回date对象
-            'document_number': self.document_number or '',
-            'model_number': self.product_type.model_number,
-            'batch_number': self.batch_number,
-            'product_spec': self.product_spec or self.product_type.model_number,
-            'quantity': self.quantity or 0,  # 添加数量字段
-            'unit_price': float(self.unit_price) if self.unit_price else 0.0,  # 转换Decimal类型
-            'total_amount': float(self.total_amount) if self.total_amount else 0.0,  # 添加总金额
-            'batch_group': self.batch_group_name or '',
-            'pin_pitch': self.pin_pitch or '',
-            'notes': self.notes or ''
-        }
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 @receiver(post_save, sender=IncomingShipment)
 def update_inventory_on_incoming(sender, instance, created, **kwargs):
@@ -285,3 +255,29 @@ class OperationLog(models.Model):
         verbose_name = '操作日志'
         verbose_name_plural = '操作日志'
         ordering = ['-created_at']
+
+from django.db import models
+
+class OutboundRecord(models.Model):
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE, verbose_name='客户')
+    date = models.DateField(verbose_name='日期')
+    delivery_number = models.CharField(max_length=50, verbose_name='送单号码')
+    batch_number = models.CharField(max_length=50, verbose_name='批号')
+    product_type = models.ForeignKey('ProductType', on_delete=models.CASCADE, verbose_name='产品型号')
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='数量')
+    foot_distance = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='脚距')
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='单价')
+    unit_weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='单重')
+    remarks = models.TextField(blank=True, null=True, verbose_name='备注')
+    
+    @property
+    def total_amount(self):
+        return self.quantity * self.unit_price
+
+    class Meta:
+        verbose_name = '出库记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.customer.name} - {self.date} - {self.delivery_number}"

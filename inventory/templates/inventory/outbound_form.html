@@ -3,30 +3,29 @@
 {% block content %}
 <div class="container mt-4">
     <h2>{{ title }}</h2>
+    <!-- 在表单标签内添加这两个隐藏字段 -->
     <form method="post">
         {% csrf_token %}
         <div class="row">
             <div class="col-md-6">
                 {% for field in form %}
+                {% if field.name != 'total_amount' and field.name != 'unit_price' %}  {# 排除计算字段 #}
                 <div class="mb-3">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field.label_tag }}
                     {{ field }}
                     {% if field.help_text %}
                     <div class="form-text">{{ field.help_text }}</div>
                     {% endif %}
-                    {% if field.errors %}
-                    <div class="alert alert-danger">
-                        {{ field.errors }}
-                    </div>
-                    {% endif %}
+                    {{ field.errors }}
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>
-        <div class="mb-3">
-            <button type="submit" class="btn btn-primary">保存</button>
-            <a href="{% url 'inventory:outbound_list' %}" class="btn btn-secondary">返回</a>
-        </div>
+        <input type="hidden" name="total_amount" id="id_total_amount">
+        <input type="hidden" name="audit_status" id="id_audit_status" value="PENDING">
+        
+        <button type="submit" class="btn btn-primary">保存</button>
     </form>
 </div>
 
@@ -82,6 +81,8 @@
                             const unitPriceInput = document.getElementById('id_unit_price');
                             if (unitPriceInput && (!unitPriceInput.value || unitPriceInput.value == '0.00')) {
                                 unitPriceInput.value = data.unit_price;
+                                // 添加输入事件触发
+                                unitPriceInput.dispatchEvent(new Event('input'));
                             }
                         })
                         .catch(error => {
@@ -101,4 +102,27 @@
     });
 </script>
 {% endblock %}
-{% endblock %} 
+{% endblock %}
+<div class="form-group">
+    <label for="id_unit_price">单价：</label>
+    <!-- 确保没有readonly属性 -->
+    <input type="number" 
+           class="form-control" 
+           id="id_unit_price" 
+           name="unit_price" 
+           step="0.01"
+           min="0.01"
+           required 
+           value="{{ form.unit_price.value|default_if_none:'' }}">
+</div>
+
+// 添加数量或单价变化事件监听
+document.getElementById('id_quantity').addEventListener('input', calculateTotal);
+document.getElementById('id_unit_price').addEventListener('input', calculateTotal);
+
+function calculateTotal() {
+    const quantity = parseFloat(document.getElementById('id_quantity').value) || 0;
+    const unitPrice = parseFloat(document.getElementById('id_unit_price').value) || 0;
+    const total = quantity * unitPrice;
+    document.getElementById('id_total_amount').value = total.toFixed(2);
+}

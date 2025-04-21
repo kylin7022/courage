@@ -39,7 +39,11 @@
                     <td>{{ product_type.unit_price }}</td>
                     <td>{{ product_type.created_at|date:"Y-m-d H:i" }}</td>
                     <td>
-                        <a href="{% url 'inventory:product_type_edit' product_type.id %}" class="btn btn-sm btn-info">编辑</a>
+                        <a href="{% url 'inventory:product_type_edit' product_type.id %}" class="btn btn-sm btn-primary">编辑</a>
+                        <form method="post" action="{% url 'inventory:product_type_delete' product_type.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定要删除该产品型号吗？')">删除</button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}

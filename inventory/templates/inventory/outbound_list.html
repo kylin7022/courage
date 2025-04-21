@@ -116,4 +116,27 @@
 
 <!-- 确保加载了Bootstrap的JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-{% endblock %} 
+{% endblock %}
+
+
+<!-- 修改导出表格的列标题部分 -->
+<thead>
+    <tr>
+        <th>批号</th>
+        <th>品名规格</th>
+        <th>数量</th>
+        <th>单重(g)</th>
+        <th>备注</th>
+    </tr>
+</thead>
+<tbody>
+    {% for shipment in outbound_shipments %}
+    <tr>
+        <td>{{ shipment.batch_number }}</td>
+        <td>{{ shipment.product_spec }}</td>
+        <td>{{ shipment.quantity }}</td>
+        <td>{{ shipment.unit_weight }}</td>
+        <td>{{ shipment.notes }}</td>
+    </tr>
+    {% endfor %}
+</tbody>

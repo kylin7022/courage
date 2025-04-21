@@ -26,14 +26,14 @@ class CustomerForm(forms.ModelForm):
             'unit_price': forms.NumberInput(attrs={
                 'class': 'form-control', 
                 'step': '0.01',
-                'required': False,  # 设置为非必填
-                'initial': 0  # 设置默认值为0
+                'required': False,
+                'initial': 0
             })
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['unit_price'].required = False  # 设置字段为非必填
+        self.fields['unit_price'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -93,39 +93,14 @@ class IncomingShipmentForm(forms.ModelForm):
         return quantity
 
 class OutgoingShipmentForm(forms.ModelForm):
-    batch_group_name = forms.CharField(
-        label='批次组',
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'autocomplete': 'off'  # Add this to prevent browser autocomplete
-        })
-    )
-    
     class Meta:
         model = OutgoingShipment
-        fields = [
-            'document_number', 'customer', 'product_type', 'batch_number',
-            'product_spec', 'shipment_date', 'order_number', 'quantity',
-            'unit_price', 'total_amount',  # 新增总金额字段
-            'pin_pitch', 'unit_weight', 'notes', 'batch_group_name'
-        ]
+        exclude = ['total_amount', 'audit_status']  # 明确排除这两个字段
         widgets = {
-            'document_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'customer': forms.Select(attrs={'class': 'form-control'}),
-            'product_type': forms.Select(attrs={'class': 'form-control'}),
-            'batch_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'shipment_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'order_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'unit_price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'readonly': True,  # 设置为只读
-                'tabindex': '-1'   # 禁止聚焦
+                'step': '0.01',
+                'min': '0.01',
+                'class': 'form-control'
             }),
         }
 
